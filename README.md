@@ -2,7 +2,7 @@
 
 Note-taking web app.
 
-Tech stack: Next.js, React, TailwindCSS.
+Tech stack: Next.js, React, MongoDB, TailwindCSS.
 
 ## Setup
 
@@ -11,7 +11,7 @@ Tech stack: Next.js, React, TailwindCSS.
     npm install
     ```
 
-2. Set env variables
+2. Create .env file and set environment variables:
     ```bash
     MONGODB_URI=<token>
     ```
@@ -19,5 +19,4 @@ Tech stack: Next.js, React, TailwindCSS.
 3. Run the development server:
     ```bash
     npm run dev
-
-4. Open [http://localhost:3000](http://localhost:3000) to see the result.
+    ```

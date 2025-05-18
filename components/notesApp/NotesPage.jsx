@@ -7,6 +7,7 @@ export default function NotesPage() {
   const [notes, setNotes] = useState([]);
   const [showSidebar, setShowSidebar] = useState(true);
   const [userId, setUserId] = useState('');
+  const [loading, setLoading] = useState(true);
 
   // Initialize user ID
   useEffect(() => {
@@ -21,13 +22,17 @@ export default function NotesPage() {
   // Fetch notes from MongoDB Cluster
   useEffect(() => {
     if (!userId) return;
+    setLoading(true);
     fetch(`/api/notes?userId=${userId}`)
       .then((res) => res.json())
       .then((data) => {
-        console.log('Fetched notes:', data);
-        setNotes(data)
+        setNotes(data);
+        setLoading(false);
       })
-      .catch((err) => console.error('Error loading notes:', err));
+      .catch((err) => {
+        console.error('Error loading notes:', err);
+        setLoading(false);
+      });
   }, [userId]);
 
   const addNote = async (text) => {
@@ -61,7 +66,9 @@ export default function NotesPage() {
               <div className="flex">
                 <aside className="w-64 bg-gray-100 p-2 overflow-y-auto transition-all duration-300">
                   <h2 className="text-lg font-bold mb-4">🗂 My Notes</h2>
-                  {notes.length === 0 ? (
+                  {loading ? (
+                    <p className="text-sm text-gray-400">Loading notes...</p>
+                  ) : notes.length === 0 ? (
                     <p className="text-sm text-gray-500">No notes yet</p>
                   ) : (
                     <ul className="space-y-2">
@@ -80,7 +87,11 @@ export default function NotesPage() {
         <main className={`flex-1 w-fit p-6 transition-all duration-300 ${showSidebar ? '' : 'w-full'}`}>
           <h1 className="text-2xl font-bold mb-4">Add a Note</h1>
           <NoteForm onAdd={addNote} />
-          <NotesList notes={notes} onDelete={deleteNote} />
+          {loading ? (
+            <p className="text-gray-500">Loading...</p>
+          ) : (
+            <NotesList notes={notes} onDelete={deleteNote} />
+          )}
         </main>
       </div>
   );
