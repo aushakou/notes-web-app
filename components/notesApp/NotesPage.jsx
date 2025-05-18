@@ -27,7 +27,7 @@ export default function NotesPage() {
     fetch(`/api/notes?userId=${userId}`)
       .then((res) => res.json())
       .then((data) => {
-        setNotes(data);
+        setNotes(data.reverse());
         setLoading(false);
       })
       .catch((err) => {
@@ -52,23 +52,34 @@ export default function NotesPage() {
   };
 
   return (
-      <div className="flex min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
         <div className="flex flex-row">
-          <div className="flex-none">
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="h-full w-fit bg-gray-200 text-sm px-2 py-1 rounded hover:bg-gray-300"
+          <div 
+          onClick={() => setShowSidebar(!showSidebar)}
+          className="z-100 bg-gray-200 hover:bg-gray-300">
+            <div 
+              className="fixed h-full w-9 bg-gray-200 hover:bg-gray-300"
+            >
+            </div> 
+            <span
+              className="fixed top-1/2 -translate-y-1/2 z-50 select-none pointer-events-none text-gray-500 px-2 py-1"
             >
               {showSidebar ? '<<' : '>>'}
-            </button>
+            </span>
           </div>
-          {showSidebar && (
-            <NotesSidebar notes={notes} loading={loading} />
-          )}
+          <div
+            className={`fixed ml-9 top-0 left-0 h-screen z-10 w-64 bg-gray-100 shadow transition-transform duration-300 transform ${
+              showSidebar ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            {showSidebar && (
+              <NotesSidebar notes={notes} loading={loading} />
+            )}
+          </div>
         </div>
         {/* Main content always full width if sidebar is hidden */}
-        <main className={`flex-1 w-fit p-6 transition-all duration-300 ${showSidebar ? '' : 'w-full'}`}>
+        <main className={`flex-1 overflow-y-auto w-fit p-6 transition-all duration-300 ${showSidebar ? 'ml-72' : 'ml-9 w-full'}`}>
           <h1 className="text-2xl font-bold mb-4">Add a Note</h1>
           <NoteForm onAdd={addNote} />
           {loading ? (

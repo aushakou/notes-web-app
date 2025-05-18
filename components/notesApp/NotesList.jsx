@@ -6,7 +6,7 @@ export default function NotesList({ notes, onDelete }) {
       {notes.map((note) => (
         <li
           key={note._id}
-          className="p-4 m-4 ring ring-gray-300 shadow-md rounded flex justify-between items-center"
+          className="p-4 mt-4 mb-4 ring ring-gray-300 shadow-md rounded flex justify-between items-center"
         >
           <span>{note.text}</span>
           <button
