@@ -5,12 +5,12 @@ export default function NotesList({ notes, onDelete }) {
     <ul className="flex flex-col space-y-2">
       {notes.map((note) => (
         <li
-          key={note.id}
+          key={note._id}
           className="p-4 m-4 ring ring-gray-300 shadow-md rounded flex justify-between items-center"
         >
           <span>{note.text}</span>
           <button
-            onClick={() => onDelete(note.id)}
+            onClick={() => onDelete(note._id)}
             className="text-red-500 hover:text-red-700"
           >
             ❌

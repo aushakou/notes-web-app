@@ -1,25 +1,52 @@
-import { useState } from 'react';
-import Layout from '../Layout';
+import { useState, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import NoteForm from './NoteForm';
 import NotesList from './NotesList';
-import useLocalStorage from '../../hooks/useLocalStorage';
 
 export default function NotesPage() {
-  const [notes, setNotes] = useLocalStorage('notes', []);
+  const [notes, setNotes] = useState([]);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [userId, setUserId] = useState('');
 
-  const addNote = (text) => {
-    const newNote = { id: Date.now(), text };
+  // Initialize user ID
+  useEffect(() => {
+    let storedId = localStorage.getItem('userId');
+    if (!storedId) {
+      storedId = uuidv4();
+      localStorage.setItem('userId', storedId);
+    }
+    setUserId(storedId);
+  }, []);
+
+  // Fetch notes from MongoDB Cluster
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/notes?userId=${userId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('Fetched notes:', data);
+        setNotes(data)
+      })
+      .catch((err) => console.error('Error loading notes:', err));
+  }, [userId]);
+
+  const addNote = async (text) => {
+    const res = await fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, userId }),
+    });
+    const newNote = await res.json();
     setNotes([newNote, ...notes]);
   };
 
-  const deleteNote = (id) => {
-    setNotes(notes.filter((note) => note.id !== id));
+  const deleteNote = async (id) => {
+    await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+    setNotes(notes.filter((note) => note._id !== id));
   };
 
   return (
-    <Layout>
-      <div className="flex h-screen">
+      <div className="flex min-h-screen">
         {/* Sidebar */}
         <div className="flex flex-row">
           <div className="flex-none">
@@ -39,7 +66,7 @@ export default function NotesPage() {
                   ) : (
                     <ul className="space-y-2">
                       {notes.map((note) => (
-                        <li key={note.id} className="p-2 bg-white border rounded text-sm truncate">
+                        <li key={note._id} className="p-2 bg-white ring ring-gray-300 shadow-sm rounded text-sm truncate">
                           {note.text}
                         </li>
                       ))}
@@ -56,6 +83,5 @@ export default function NotesPage() {
           <NotesList notes={notes} onDelete={deleteNote} />
         </main>
       </div>
-    </Layout>
   );
 }

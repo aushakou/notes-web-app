@@ -13,7 +13,7 @@ Tech stack: Next.js, React, TailwindCSS.
 
 2. Set env variables
     ```bash
-    export token=<token>
+    MONGODB_URI=<token>
     ```
 
 3. Run the development server:
