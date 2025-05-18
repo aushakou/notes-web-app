@@ -1,6 +1,6 @@
 export default function Public() {
     return (
-      <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+      <main className="p-4 m-4">
         <h1>Public Notes Page</h1>
       </main>
     );

@@ -11,13 +11,16 @@ export default function NoteForm({ onAdd }) {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="flex space-x-2">
       <input
-        placeholder="Enter note"
+        className="flex-1 ring ring-gray-300 shadow-lg px-3 py-2 rounded"
+        placeholder="Write a note..."
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <button type="submit">Add</button>
+      <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Add
+      </button>
     </form>
   );
 }

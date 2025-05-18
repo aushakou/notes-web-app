@@ -17,9 +17,11 @@ export default function NotesPage() {
 
   return (
     <Layout>
-      <h1>📝 My Notes</h1>
-      <NoteForm onAdd={addNote} />
-      <NotesList notes={notes} onDelete={deleteNote} />
+      <div className="mx-auto m-6 p-6 ring ring-gray-300 shadow-lg rounded space-y-6">
+        <h1 className="text-2xl font-bold text-center">📝 My Notes</h1>
+        <NoteForm onAdd={addNote} />
+        <NotesList notes={notes} onDelete={deleteNote} />
+      </div>
     </Layout>
   );
 }
