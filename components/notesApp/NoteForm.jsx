@@ -11,14 +11,16 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
   const hasUserEdited = useRef(false);
-
+  
+  const NEW_NOTE_PLACEHOLDER_ID = `NEW_NOTE_PLACEHOLDER_ID`;
+  
   useEffect(() => {
     setNoteTitle(selectedNote?.title || '');
     setNoteBody(selectedNote?.body || '');
 
     setTimeout(() => {
       scrollContainerRef?.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      if (titleRef.current && !selectedNote?.title && !selectedNote?.body) {
+      if (titleRef.current && selectedNote?._id === NEW_NOTE_PLACEHOLDER_ID) {
         titleRef.current?.focus();
       }
     }, 0);
@@ -26,7 +28,7 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
 
   // Auto-save logic
   useEffect(() => {
-    if (!hasUserEdited.current || (noteTitle === lastSavedNoteTitle.current && noteBody === lastSavedNoteBody.current)) {
+    if (!hasUserEdited.current || !selectedNote || (noteTitle === lastSavedNoteTitle.current && noteBody === lastSavedNoteBody.current)) {
       return;
     }
 
@@ -34,15 +36,19 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
 
     typingTimeout.current = setTimeout(() => {
       const saveNote = async () => {
-        if (selectedNote._id) {
+        if (selectedNote._id && selectedNote._id !== NEW_NOTE_PLACEHOLDER_ID) {
           await onUpdate(selectedNote._id, { title: noteTitle, body: noteBody });
-        } else {
-          const newNote = await onAdd({ title: noteTitle, body: noteBody });
-          setSelectedNote(newNote);
+          lastSavedNoteTitle.current = noteTitle;
+          lastSavedNoteBody.current = noteBody;
+        } else { // It's a new note
+          const newNoteWithoutId = await onAdd({ title: noteTitle, body: noteBody });
+          if (newNoteWithoutId) {
+            setSelectedNote(newNoteWithoutId); // Update selectedNote in parent to have the real ID
+            lastSavedNoteTitle.current = newNoteWithoutId.title;
+            lastSavedNoteBody.current = newNoteWithoutId.body;
+          }
         }
 
-        lastSavedNoteTitle.current = noteTitle;
-        lastSavedNoteBody.current = noteBody;
         setShowSaved(true);
         hasUserEdited.current = false;
         setTimeout(() => setShowSaved(false), 3000);
@@ -55,22 +61,24 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
   }, [noteTitle, noteBody, selectedNote]);
 
   const handleBlur = async () => {
-    // If user cleared an existing note → delete it
-    if (!noteTitle && !noteBody && selectedNote._id) {
-      await onDelete(selectedNote._id);
-      setSelectedNote({_id: null, title: '', body: '' });
+    if (!noteTitle && !noteBody && selectedNote._id && selectedNote._id !== NEW_NOTE_PLACEHOLDER_ID) {
       return;
     }
 
-    // Normal save
+    // Normal save if content has changed
     if (noteTitle !== lastSavedNoteTitle.current || noteBody !== lastSavedNoteBody.current) {
-      if (selectedNote._id) {
+      if (selectedNote._id && selectedNote._id !== NEW_NOTE_PLACEHOLDER_ID) {
         await onUpdate(selectedNote._id, { title: noteTitle, body: noteBody });
-      } else {
-        await onAdd({ title: noteTitle, body: noteBody }).then((newNote) => setSelectedNote(newNote));
+        lastSavedNoteTitle.current = noteTitle;
+        lastSavedNoteBody.current = noteBody;
+      } else { // It's a new note
+        const newNoteWithoutId = await onAdd({ title: noteTitle, body: noteBody });
+        if (newNoteWithoutId) {
+            setSelectedNote(newNoteWithoutId); // Update selectedNote to have the real ID
+            lastSavedNoteTitle.current = newNoteWithoutId.title;
+            lastSavedNoteBody.current = newNoteWithoutId.body;
+        }
       }
-      lastSavedNoteTitle.current = noteTitle;
-      lastSavedNoteBody.current = noteBody;
       setShowSaved(true);
       hasUserEdited.current = false;
       setTimeout(() => setShowSaved(false), 3000);
@@ -82,13 +90,26 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
     const now = new Date().toISOString();
 
     setNoteTitle(newTitle);
-    setSelectedNote({ ...selectedNote, title: newTitle, updatedAt: now });
     hasUserEdited.current = true;
 
-    mutate((notes) =>
-      notes.map((n) =>
-        n._id === selectedNote._id ? { ...n, title: newTitle, updatedAt: now } : n
-      ), false);
+    if (selectedNote?._id === NEW_NOTE_PLACEHOLDER_ID) {
+      mutate(
+        (notes) =>
+          notes.map((n) =>
+            n._id === NEW_NOTE_PLACEHOLDER_ID ? { ...n, title: newTitle, updatedAt: now } : n
+          ),
+        false
+      );
+    } else if (selectedNote) {
+      setSelectedNote({ ...selectedNote, title: newTitle, updatedAt: now });
+      mutate(
+        (notes) =>
+          notes.map((n) =>
+            n._id === selectedNote._id ? { ...n, title: newTitle, updatedAt: now } : n
+          ),
+        false
+      );
+    }
   };
 
   const handleBodyChange = (e) => {
@@ -96,13 +117,26 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
     const now = new Date().toISOString();
 
     setNoteBody(newBody);
-    setSelectedNote({ ...selectedNote, body: newBody, updatedAt: now });
     hasUserEdited.current = true;
 
-    mutate((notes) =>
-      notes.map((n) =>
-        n._id === selectedNote._id ? { ...n, body: newBody, updatedAt: now } : n
-      ), false);
+    if (selectedNote?._id === NEW_NOTE_PLACEHOLDER_ID) {
+      mutate(
+        (notes) =>
+          notes.map((n) =>
+            n._id === NEW_NOTE_PLACEHOLDER_ID ? { ...n, body: newBody, updatedAt: now } : n
+          ),
+        false
+      );
+    } else if (selectedNote) {
+      setSelectedNote({ ...selectedNote, body: newBody, updatedAt: now });
+      mutate(
+        (notes) =>
+          notes.map((n) =>
+            n._id === selectedNote._id ? { ...n, body: newBody, updatedAt: now } : n
+          ),
+        false
+      );
+    }
   };
 
   if (!selectedNote) {

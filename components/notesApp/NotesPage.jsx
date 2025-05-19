@@ -6,12 +6,14 @@ import NotesList from './NotesList';
 import NotesSidebar from './NotesSidebar';
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
+const NEW_NOTE_PLACEHOLDER_ID = `NEW_NOTE_PLACEHOLDER_ID`;
 
 export default function NotesPage() {
   const [userId, setUserId] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
   const [selectedNote, setSelectedNote] = useState(null);
   const scrollContainerRef = useRef(null);
+  const previousSelectedNoteIdRef = useRef();
 
   // Initialize userId from localStorage
   useEffect(() => {
@@ -29,40 +31,83 @@ export default function NotesPage() {
     fetcher
   );
 
-  // Add note
-  const addNote = async ({ title, body }) => {
-    const tempNote = {
-      _id: `temp-${Date.now()}`,
-      title,
-      body,
-      userId,
-    };
+  // Effect to remove empty, unsaved placeholder if another note is selected
+  useEffect(() => {
+    const prevSelectedId = previousSelectedNoteIdRef.current;
+    const currentSelectedId = selectedNote?._id;
 
-    let newNote;
+    if (
+      prevSelectedId === NEW_NOTE_PLACEHOLDER_ID && // The previously selected item was the placeholder
+      currentSelectedId !== NEW_NOTE_PLACEHOLDER_ID   // And now something else (or nothing) is selected
+    ) {
+      // Find the placeholder in the current notes list (from SWR cache)
+      const placeholderInCache = notes.find(note => note._id === NEW_NOTE_PLACEHOLDER_ID);
+
+      if (
+        placeholderInCache &&
+        !placeholderInCache.title && // Check if it's actually empty
+        !placeholderInCache.body
+      ) {
+        mutate(
+          (currentNotesData = []) => currentNotesData.filter(n => n._id !== NEW_NOTE_PLACEHOLDER_ID),
+          { revalidate: false } // Don't re-fetch from server, just update local cache
+        );
+      }
+    }
+
+    // Update the ref for the next render
+    previousSelectedNoteIdRef.current = currentSelectedId;
+  }, [selectedNote, notes, mutate]); // Dependencies: selectedNote, notes array, and mutate function
+
+  const addNote = async ({ title, body }) => {
+    let noteToReturnForForm = null;
 
     await mutate(
-      async (currentNotes = []) => {
+      async (currentNotesData = []) => {
         const res = await fetch('/api/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title, body, userId, updatedAt: new Date().toISOString() }),
         });
-        newNote = await res.json();
-        return [newNote, ...currentNotes.filter(n => n._id !== tempNote._id)];
+        const newNoteFromServer = await res.json();
+        noteToReturnForForm = newNoteFromServer;
+
+        // If the selected note was the placeholder, update NotesPage's selectedNote state
+        // to the new note from the server *before* this async callback returns data to SWR.
+        if (selectedNote?._id === NEW_NOTE_PLACEHOLDER_ID && newNoteFromServer) {
+          setSelectedNote(newNoteFromServer);
+        }
+
+        // Replace the placeholder with the actual note from the server in SWR's cache
+        return currentNotesData.map(note =>
+          note._id === NEW_NOTE_PLACEHOLDER_ID ? newNoteFromServer : note
+        );
       },
       {
-        optimisticData: (currentNotes = []) => [tempNote, ...currentNotes],
+        optimisticData: (currentNotesData = []) => {
+          // Find and update the existing placeholder note in SWR cache
+          return currentNotesData.map(note => {
+            if (note._id === NEW_NOTE_PLACEHOLDER_ID) {
+              return {
+                ...note,
+                title,
+                body,
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return note;
+          });
+        },
         rollbackOnError: true,
         revalidate: false,
       }
     );
-  
-    return newNote;
+
+    return noteToReturnForForm;
   };
 
-  // Update note
   const updateNote = async (id, { title, body }) => {
-    if (id.startsWith('temp-')) return; // don't try to PATCH a temp note
+    if (id === NEW_NOTE_PLACEHOLDER_ID) return; // don't try to PATCH a temp note
 
     mutate(
       async (currentNotes = []) => {
@@ -89,12 +134,21 @@ export default function NotesPage() {
     );
   };
 
-  // Delete note
   const deleteNote = async (id) => {
     if (selectedNote?._id === id) {
       setSelectedNote(null);
     }
 
+    // If it's the placeholder note, just remove it locally without an API call.
+    if (id === NEW_NOTE_PLACEHOLDER_ID) {
+      mutate(
+        (currentNotes = []) => currentNotes.filter((note) => note._id !== id),
+        { revalidate: false } // No need to revalidate from server
+      );
+      return; // Stop execution to prevent API call
+    }
+
+    // For actual notes, proceed with API call and optimistic update
     mutate(
       async (currentNotes = []) => {
         await fetch(`/api/notes/${id}`, { method: 'DELETE' });
@@ -110,7 +164,42 @@ export default function NotesPage() {
   };
 
   const handleNewNote = () => {
-    setSelectedNote({_id: null, title: '', body: ''});
+    // Check for an existing empty note with a real ID
+    const existingEmptyNote = notes.find(note =>
+      !note.title &&
+      !note.body &&
+      note._id && note._id !== NEW_NOTE_PLACEHOLDER_ID
+    );
+
+    if (existingEmptyNote) {
+      setSelectedNote(existingEmptyNote);
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); 
+      return;
+    }
+
+    // If no existing empty note, proceed to create a new placeholder
+    const placeholderNote = {
+      _id: NEW_NOTE_PLACEHOLDER_ID,
+      title: '',
+      body: '',
+      userId,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Use SWR's mutate to update the local cache
+    mutate(
+      (currentNotesData = []) => {
+        // Remove any existing placeholder first to avoid duplicates if clicked multiple times
+        const notesWithoutOldPlaceholder = currentNotesData.filter(
+          note => note._id !== NEW_NOTE_PLACEHOLDER_ID
+        );
+        // Add the new placeholder at the beginning of the list
+        return [placeholderNote, ...notesWithoutOldPlaceholder];
+      },
+      { revalidate: false } // Don't re-fetch from server for this UI-only change
+    );
+
+    setSelectedNote(placeholderNote);
   };
 
   return (
