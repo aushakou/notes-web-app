@@ -6,8 +6,6 @@ const NoteSchema = new mongoose.Schema({
   body: String,
   isFavorite: { type: Boolean, default: false },
   folder: { type: String, default: 'default' },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-});
+}, { timestamps: true });
 
 export default mongoose.models.Note || mongoose.model('Note', NoteSchema);

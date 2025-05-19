@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
-export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setSelectedNote, mutate }) {
+export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setSelectedNote, mutate, scrollContainerRef }) {
   const [noteTitle, setNoteTitle] = useState(selectedNote?.title || '');
   const [noteBody, setNoteBody] = useState(selectedNote?.body || '');
   const [showSaved, setShowSaved] = useState(false);
@@ -17,12 +17,9 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
     setNoteBody(selectedNote?.body || '');
 
     setTimeout(() => {
-      if (titleRef.current) {
-        if (!selectedNote?.title && !selectedNote?.body) {
-          setTimeout(() => {
-            titleRef.current?.focus();
-          }, 500);
-        }
+      scrollContainerRef?.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      if (titleRef.current && !selectedNote?.title && !selectedNote?.body) {
+        titleRef.current?.focus();
       }
     }, 0);
   }, [selectedNote]);
@@ -48,7 +45,7 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
         lastSavedNoteBody.current = noteBody;
         setShowSaved(true);
         hasUserEdited.current = false;
-        setTimeout(() => setShowSaved(false), 2000);
+        setTimeout(() => setShowSaved(false), 3000);
       };
 
       saveNote();
@@ -75,30 +72,49 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
       lastSavedNoteTitle.current = noteTitle;
       lastSavedNoteBody.current = noteBody;
       setShowSaved(true);
-      setTimeout(() => setShowSaved(false), 2000);
+      hasUserEdited.current = false;
+      setTimeout(() => setShowSaved(false), 3000);
     }
   };
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
+    const now = new Date().toISOString();
+
     setNoteTitle(newTitle);
-    setSelectedNote({ ...selectedNote, title: newTitle });
+    setSelectedNote({ ...selectedNote, title: newTitle, updatedAt: now });
     hasUserEdited.current = true;
 
     mutate((notes) =>
       notes.map((n) =>
-        n._id === selectedNote._id ? { ...n, title: newTitle } : n
+        n._id === selectedNote._id ? { ...n, title: newTitle, updatedAt: now } : n
       ), false);
   };
 
   const handleBodyChange = (e) => {
     const newBody = e.target.value;
+    const now = new Date().toISOString();
+
     setNoteBody(newBody);
+    setSelectedNote({ ...selectedNote, body: newBody, updatedAt: now });
     hasUserEdited.current = true;
+
+    mutate((notes) =>
+      notes.map((n) =>
+        n._id === selectedNote._id ? { ...n, body: newBody, updatedAt: now } : n
+      ), false);
   };
 
+  if (!selectedNote) {
+    return (
+      <div className="flex items-center justify-center w-full min-h-[60%] text-gray-500 italic">
+        Select a note or create a new one
+      </div>
+    );
+  }
+  
   return (
-    <div className="relative w-full min-h-[60%] bg-gray-100 p-4 rounded-md">
+    <div ref={scrollContainerRef} className="relative w-full min-h-[60%] bg-gray-100 p-4 rounded-md">
       <input
         ref={titleRef}
         type="text"

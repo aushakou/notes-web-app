@@ -1,9 +1,13 @@
 export default function NotesList({ notes, onDelete, onSelect, selectedNote }) {
-  if (notes.length === 0) return <p className="text-gray-500">No notes yet.</p>;
+  if (notes.length === 0) return <p className="text-gray-500">No notes yet</p>;
+
+  const sortedNotes = [...notes].sort((a, b) => {
+    return new Date(b.updatedAt) - new Date(a.updatedAt); // newest first
+});
 
   return (
     <ul className="flex flex-col space-y-2">
-      {notes.map((note) => (
+      {sortedNotes.map((note) => (
         <li
           key={note._id}
           onClick={() => onSelect(note)}
@@ -15,7 +19,10 @@ export default function NotesList({ notes, onDelete, onSelect, selectedNote }) {
         >
           <span className="truncate">{note.title || 'Untitled'}</span>
           <button
-            onClick={() => onDelete(note._id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(note._id);
+            }}
             className="text-red-500 hover:text-red-700"
           >
             ❌

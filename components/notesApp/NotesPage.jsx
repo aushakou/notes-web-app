@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import useSWR from 'swr';
 import NoteForm from './NoteForm';
@@ -10,7 +10,8 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 export default function NotesPage() {
   const [userId, setUserId] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
-  const [selectedNote, setSelectedNote] = useState({_id: null, title: ''});
+  const [selectedNote, setSelectedNote] = useState(null);
+  const scrollContainerRef = useRef(null);
 
   // Initialize userId from localStorage
   useEffect(() => {
@@ -35,7 +36,6 @@ export default function NotesPage() {
       title,
       body,
       userId,
-      createdAt: new Date().toISOString(),
     };
 
     let newNote;
@@ -45,7 +45,7 @@ export default function NotesPage() {
         const res = await fetch('/api/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, body, userId }),
+          body: JSON.stringify({ title, body, userId, updatedAt: new Date().toISOString() }),
         });
         newNote = await res.json();
         return [newNote, ...currentNotes.filter(n => n._id !== tempNote._id)];
@@ -66,19 +66,22 @@ export default function NotesPage() {
 
     mutate(
       async (currentNotes = []) => {
-        await fetch(`/api/notes/${id}`, {
+        const res = await fetch(`/api/notes/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title, body }),
         });
+        
+        const updatedNote = await res.json();
+        
         return currentNotes.map((note) =>
-          note._id === id ? { ...note, title, body } : note
+          note._id === id ? updatedNote : note
         );
       },
       {
         optimisticData: (currentNotes = []) =>
           currentNotes.map((note) =>
-            note._id === id ? { ...note, title, body } : note
+            note._id === id ? { ...note, title, body, updatedAt: new Date().toISOString() } : note
           ),
         rollbackOnError: true,
         revalidate: false,
@@ -88,7 +91,9 @@ export default function NotesPage() {
 
   // Delete note
   const deleteNote = async (id) => {
-    if (selectedNote?._id === id) setSelectedNote(null);
+    if (selectedNote?._id === id) {
+      setSelectedNote(null);
+    }
 
     mutate(
       async (currentNotes = []) => {
@@ -105,7 +110,7 @@ export default function NotesPage() {
   };
 
   const handleNewNote = () => {
-    setSelectedNote({ title: '', body: '' });
+    setSelectedNote({_id: null, title: '', body: ''});
   };
 
   return (
@@ -141,9 +146,9 @@ export default function NotesPage() {
           </div>
         </div>
         {/* Main content always full width if sidebar is hidden */}
-        <main className={`flex-1 overflow-y-auto w-fit p-6 transition-all duration-300 ${showSidebar ? 'ml-72' : 'ml-9 w-full'}`}>
+        <main ref={scrollContainerRef} className={`flex-1 overflow-y-auto w-fit p-6 transition-all duration-300 ${showSidebar ? 'ml-72' : 'ml-9 w-full'}`}>
           <div className="flex justify-between items-center">
-            <h1 className="w-125 text-2xl truncate font-bold mb-4">Notes/{selectedNote.title}</h1>
+            <h1 className="w-125 text-2xl truncate font-bold mb-4">Notes/{selectedNote?.title || 'Untitled'}</h1>
             <button
               onClick={handleNewNote}
               type="button"
@@ -159,11 +164,13 @@ export default function NotesPage() {
             selectedNote={selectedNote}
             setSelectedNote={setSelectedNote}
             mutate={mutate}
+            scrollContainerRef={scrollContainerRef}
           />
+          <hr className="text-gray-300 mt-6" />
           {isLoading ? (
-            <p className="text-gray-500">Loading...</p>
+            <p className="text-gray-500">Loading notes...</p>
           ) : (
-            <div className="mt-5">
+            <div className="mt-2">
               <NotesList
                 notes={notes}
                 onDelete={deleteNote}

@@ -1,4 +1,8 @@
 export default function NotesSidebar({ notes, loading, onSelect, selectedNote }) {
+    const sortedNotes = [...notes].sort((a, b) => {
+        return new Date(b.updatedAt) - new Date(a.updatedAt); // newest first
+    });
+
     return (
         <div className="flex h-full overflow-y-auto overscroll-contain scrollbar-hide">
             <aside className="w-64 bg-gray-100 p-2 select-none transition-all duration-300">
@@ -8,10 +12,10 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote })
                 {loading ? (
                     <p className="text-sm mt-10 text-gray-400">Loading notes...</p>
                 ) : notes.length === 0 ? (
-                    <p className="text-sm mt-10 text-gray-600">No notes yet.</p>
+                    <p className="text-sm mt-10 text-gray-600">No notes yet</p>
                 ) : (
                     <ul className="space-y-2 pb-4 mt-10">
-                    {notes.map((note) => (
+                    {sortedNotes.map((note) => (
                         <li 
                             key={note._id} 
                             className={`p-2 ring shadow-sm rounded text-sm truncate
