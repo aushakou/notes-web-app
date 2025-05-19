@@ -18,8 +18,8 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
     lastSavedNoteBody.current = selectedNote?.body || '';
     setTimeout(() => {
       if (titleRef.current) {
-        bodyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        if (selectedNote?.title === '') {
+        titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (!selectedNote?.title && !selectedNote?.body) {
           setTimeout(() => {
             titleRef.current?.focus();
           }, 500);
@@ -81,16 +81,8 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!noteTitle && !noteBody) return;
-    if (!selectedNote) await onAdd({ title: noteTitle, body: noteBody });
-    setNoteTitle('');
-    setNoteBody('');
-  };
-
   return (
-    <div className="flex flex-col gap-4">
+    <div className="relative w-full min-h-[60%] bg-gray-100 p-4 rounded-md">
       <input
         ref={titleRef}
         type="text"
@@ -104,19 +96,19 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
           }
         }}
         placeholder="New note title"
-        className="w-full text-2xl font-semibold mb-2 bg-transparent focus:outline-none placeholder:text-gray-300"
+        className="w-full text-2xl p-2 font-semibold bg-transparent focus:outline-none placeholder-gray-400"
       />
       <TextareaAutosize
         minRows={1}
         ref={bodyRef}
-        className="text-base text-gray-800 placeholder-gray-300 focus:outline-none resize-none bg-transparent"
+        className="w-full p-2 bg-transparent focus:outline-none placeholder-gray-400 text-gray-800 resize-none "
         placeholder="Type your note..."
         value={noteBody}
         onChange={(e) => setNoteBody(e.target.value)}
         onBlur={handleBlur}
       />
       {showSaved && (
-        <div className="fixed top-20 right-4 text-gray-400 px-4 py-2 z-100">
+        <div className="absolute top-0 right-2 bg-gray-100 rounded-md text-gray-500 px-4 py-2 z-100">
           Saved.
         </div>
       )}
