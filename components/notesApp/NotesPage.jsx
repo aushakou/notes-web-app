@@ -11,7 +11,6 @@ export default function NotesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedNote, setSelectedNote] = useState(null);
 
-
   // Initialize user ID
   useEffect(() => {
     let storedId = localStorage.getItem('userId');
@@ -46,6 +45,7 @@ export default function NotesPage() {
     });
     const newNote = await res.json();
     setNotes([newNote, ...notes]);
+    return newNote;
   };
 
   const updateNote = async (id, newText) => {
@@ -96,7 +96,9 @@ export default function NotesPage() {
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold mb-4">Add a Note</h1>
             <button
-              onClick={() => setSelectedNote(null)}
+              onClick={() => {
+                setSelectedNote(null);
+              }}
               type="button"
               className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700"
             >
@@ -104,9 +106,14 @@ export default function NotesPage() {
             </button>
           </div>
           <NoteForm
-            onAdd={addNote}
+            onAdd={async (text) => {
+              const newNote = await addNote(text);
+              setSelectedNote(newNote);
+              return newNote;
+            }}
             onUpdate={updateNote}
-            existingNote={selectedNote}
+            selectedNote={selectedNote}
+            setSelectedNote={setSelectedNote}
           />
           {loading ? (
             <p className="text-gray-500">Loading...</p>
