@@ -87,7 +87,12 @@ export default function NotesPage() {
             }`}
           >
             {showSidebar && (
-              <NotesSidebar notes={notes} loading={loading} onSelect={setSelectedNote} />
+              <NotesSidebar 
+                notes={notes}
+                loading={loading}
+                onSelect={setSelectedNote}
+                selectedNote={selectedNote}
+              />
             )}
           </div>
         </div>
@@ -119,7 +124,12 @@ export default function NotesPage() {
             <p className="text-gray-500">Loading...</p>
           ) : (
             <div className="mt-10">
-              <NotesList notes={notes} onDelete={deleteNote} onSelect={setSelectedNote} />
+              <NotesList
+                notes={notes}
+                onDelete={deleteNote}
+                onSelect={setSelectedNote}
+                selectedNote={selectedNote}
+              />
             </div>
           )}
         </main>
