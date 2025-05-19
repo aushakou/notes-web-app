@@ -21,7 +21,7 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote })
                               `}
                             onClick={() => onSelect(note)}
                         >
-                        {note.text}
+                        {note.title || 'Untitled'}
                         </li>
                     ))}
                     </ul>

@@ -13,7 +13,7 @@ export default function NotesList({ notes, onDelete, onSelect, selectedNote }) {
               : 'bg-white ring-gray-300'}
           `}
         >
-          <span>{note.text}</span>
+          <span>{note.title || 'Untitled'}</span>
           <button
             onClick={() => onDelete(note._id)}
             className="text-red-500 hover:text-red-700"

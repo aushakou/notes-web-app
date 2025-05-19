@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const NoteSchema = new mongoose.Schema({
   userId: String,
   title: String,
-  text: String,
+  body: String,
   isFavorite: { type: Boolean, default: false },
   folder: { type: String, default: 'default' },
   createdAt: { type: Date, default: Date.now },

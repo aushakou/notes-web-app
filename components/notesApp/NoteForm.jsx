@@ -1,75 +1,118 @@
 import { useState, useRef, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
-export default function NoteForm({ onAdd, onUpdate, selectedNote, setSelectedNote }) {
-  const [text, setText] = useState(selectedNote?.text || '');
+export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setSelectedNote }) {
+  const [noteTitle, setNoteTitle] = useState(selectedNote?.title || '');
+  const [noteBody, setNoteBody] = useState(selectedNote?.body || '');
   const [showSaved, setShowSaved] = useState(false);
-  const lastSaved = useRef(selectedNote?.text || '');
+  const lastSavedNoteTitle = useRef(selectedNote?.title || '');
+  const lastSavedNoteBody = useRef(selectedNote?.body || '');
   const typingTimeout = useRef(null);
+  const titleRef = useRef(null);
+  const bodyRef = useRef(null);
 
   useEffect(() => {
-    setText(selectedNote?.text || '');
-    lastSaved.current = selectedNote?.text || '';
+    setNoteTitle(selectedNote?.title || '');
+    setNoteBody(selectedNote?.body || '');
+    lastSavedNoteTitle.current = selectedNote?.title || '';
+    lastSavedNoteBody.current = selectedNote?.body || '';
+    setTimeout(() => {
+      if (titleRef.current) {
+        bodyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        if (selectedNote?.title === '') {
+          setTimeout(() => {
+            titleRef.current?.focus();
+          }, 500);
+        }
+      }
+    }, 0);
+    
+    
   }, [selectedNote]);
 
   // Auto-save logic
   useEffect(() => {
-    const trimmed = text.trim();
+    if (noteTitle === lastSavedNoteTitle.current && noteBody === lastSavedNoteBody.current) {
+      return;
+    }
 
-    // Don’t run if nothing to save
-    if (!trimmed || trimmed === lastSaved.current) return;
-
-    // Debounce: clear previous timeout
     clearTimeout(typingTimeout.current);
 
-    typingTimeout.current = setTimeout(async () => {
-      if (selectedNote) {
-        // update existing note
-        await onUpdate(selectedNote._id, trimmed);
-      } else {
-        // create new note and select it
-        const newNote = await onAdd(trimmed);
-        setSelectedNote(newNote);
-      }
-      lastSaved.current = trimmed;
-      // Show "Saved."
-      setShowSaved(true);
-      setTimeout(() => setShowSaved(false), 3000);
+    typingTimeout.current = setTimeout(() => {
+      const saveNote = async () => {
+        if (selectedNote._id) {
+          await onUpdate(selectedNote._id, { title: noteTitle, body: noteBody });
+        } else {
+          const newNote = await onAdd({ title: noteTitle, body: noteBody });
+          setSelectedNote(newNote);
+        }
+
+        lastSavedNoteTitle.current = noteTitle;
+        lastSavedNoteBody.current = noteBody;
+        setShowSaved(true);
+        setTimeout(() => setShowSaved(false), 2000);
+      };
+
+      saveNote();
     }, 500); // debounce delay (ms)
 
     return () => clearTimeout(typingTimeout.current);
-  }, [text, selectedNote]);
+  }, [noteTitle, noteBody, selectedNote]);
 
   const handleBlur = async () => {
-    const trimmed = text.trim();
-    if (!trimmed || trimmed === lastSaved.current) return;
-
-    if (selectedNote) {
-      onUpdate(selectedNote._id, trimmed);
-    } else {
-      await onAdd(trimmed);
+    // If user cleared an existing note → delete it
+    if (!noteTitle && !noteBody && selectedNote._id) {
+      await onDelete(selectedNote._id);
+      setSelectedNote({_id: null, title: '', body: '' });
+      return;
     }
 
-    lastSaved.current = trimmed;
-    setShowSaved(true);
-    setTimeout(() => setShowSaved(false), 3000);
+    // Normal save
+    if (noteTitle !== lastSavedNoteTitle.current || noteBody !== lastSavedNoteBody.current) {
+      if (selectedNote._id) {
+        await onUpdate(selectedNote._id, { title: noteTitle, body: noteBody });
+      } else {
+        await onAdd({ title: noteTitle, body: noteBody }).then((newNote) => setSelectedNote(newNote));
+      }
+      lastSavedNoteTitle.current = noteTitle;
+      lastSavedNoteBody.current = noteBody;
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 2000);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    if (!selectedNote) onAdd(text.trim());
-    setText('');
+    if (!noteTitle && !noteBody) return;
+    if (!selectedNote) await onAdd({ title: noteTitle, body: noteBody });
+    setNoteTitle('');
+    setNoteBody('');
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      <input
+        ref={titleRef}
+        type="text"
+        value={noteTitle}
+        onChange={(e) => setNoteTitle(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            bodyRef.current?.focus();
+          }
+        }}
+        placeholder="New note title"
+        className="w-full text-2xl font-semibold mb-2 bg-transparent focus:outline-none placeholder:text-gray-300"
+      />
       <TextareaAutosize
         minRows={1}
-        className="text-base text-gray-800 placeholder-gray-400 focus:outline-none resize-none bg-transparent"
+        ref={bodyRef}
+        className="text-base text-gray-800 placeholder-gray-300 focus:outline-none resize-none bg-transparent"
         placeholder="Type your note..."
-        value={text}
-        onChange={(e) => setText(e.target.value)}
+        value={noteBody}
+        onChange={(e) => setNoteBody(e.target.value)}
         onBlur={handleBlur}
       />
       {showSaved && (
@@ -77,6 +120,6 @@ export default function NoteForm({ onAdd, onUpdate, selectedNote, setSelectedNot
           Saved.
         </div>
       )}
-    </form>
+    </div>
   );
 }

@@ -9,7 +9,7 @@ export default function NotesPage() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(true);
-  const [selectedNote, setSelectedNote] = useState(null);
+  const [selectedNote, setSelectedNote] = useState({_id: null, title: ''});
 
   // Initialize user ID
   useEffect(() => {
@@ -37,22 +37,22 @@ export default function NotesPage() {
       });
   }, [userId]);
 
-  const addNote = async (text) => {
+  const addNote = async ({ title, body }) => {
     const res = await fetch('/api/notes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, userId }),
+      body: JSON.stringify({ title, body, userId }),
     });
     const newNote = await res.json();
     setNotes([newNote, ...notes]);
     return newNote;
   };
 
-  const updateNote = async (id, newText) => {
+  const updateNote = async (id, { title, body }) => {
     const res = await fetch(`/api/notes/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: newText }),
+      body: JSON.stringify({ title, body }),
     });
     const updatedNote = await res.json();
   
@@ -62,6 +62,10 @@ export default function NotesPage() {
   const deleteNote = async (id) => {
     await fetch(`/api/notes/${id}`, { method: 'DELETE' });
     setNotes(notes.filter((note) => note._id !== id));
+  };
+
+  const handleNewNote = () => {
+    setSelectedNote({ title: '', body: '' });
   };
 
   return (
@@ -101,9 +105,7 @@ export default function NotesPage() {
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold mb-4">Add a Note</h1>
             <button
-              onClick={() => {
-                setSelectedNote(null);
-              }}
+              onClick={handleNewNote}
               type="button"
               className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700"
             >
@@ -111,12 +113,13 @@ export default function NotesPage() {
             </button>
           </div>
           <NoteForm
-            onAdd={async (text) => {
-              const newNote = await addNote(text);
+            onAdd={async ({ title, body }) => {
+              const newNote = await addNote({ title, body });
               setSelectedNote(newNote);
               return newNote;
             }}
             onUpdate={updateNote}
+            onDelete={deleteNote}
             selectedNote={selectedNote}
             setSelectedNote={setSelectedNote}
           />
