@@ -11,20 +11,33 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
   const hasUserEdited = useRef(false);
+  const previousNoteIdRef = useRef(null);   
   
   const NEW_NOTE_PLACEHOLDER_ID = `NEW_NOTE_PLACEHOLDER_ID`;
   
   useEffect(() => {
-    setNoteTitle(selectedNote?.title || '');
-    setNoteBody(selectedNote?.body || '');
+    const currentNoteId = selectedNote?._id;
 
-    setTimeout(() => {
-      scrollContainerRef?.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      if (titleRef.current && selectedNote?._id === NEW_NOTE_PLACEHOLDER_ID) {
-        titleRef.current?.focus();
-      }
-    }, 0);
-  }, [selectedNote]);
+    // Only scroll and focus if the selected note ID has actually changed
+    if (selectedNote && currentNoteId !== previousNoteIdRef.current) {
+      setNoteTitle(selectedNote.title || '');
+      setNoteBody(selectedNote.body || '');
+
+      setTimeout(() => {
+        scrollContainerRef?.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        if (titleRef.current && selectedNote._id === NEW_NOTE_PLACEHOLDER_ID) {
+          titleRef.current?.focus();
+        }
+      }, 0);
+    } else if (!selectedNote && previousNoteIdRef.current) {
+      // Handle case where a note was selected, and now no note is selected (e.g., after delete)
+      setNoteTitle('');
+      setNoteBody('');
+    }
+    // Update the ref after processing
+    previousNoteIdRef.current = currentNoteId;
+
+  }, [selectedNote, scrollContainerRef]); // scrollContainerRef is stable, effect mainly driven by selectedNote
 
   // Auto-save logic
   useEffect(() => {
@@ -61,6 +74,11 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
   }, [noteTitle, noteBody, selectedNote]);
 
   const handleBlur = async () => {
+    // If blurring from an empty placeholder, do nothing. NotesPage cleanup will handle it.
+    if (selectedNote?._id === NEW_NOTE_PLACEHOLDER_ID && !noteTitle && !noteBody) {
+      return;
+    }
+
     if (!noteTitle && !noteBody && selectedNote._id && selectedNote._id !== NEW_NOTE_PLACEHOLDER_ID) {
       return;
     }
@@ -148,7 +166,7 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
   }
   
   return (
-    <div ref={scrollContainerRef} className="relative w-full min-h-[60%] bg-gray-100 p-4 rounded-md">
+    <div className="relative w-full min-h-[60%] bg-gray-100 p-4 rounded-md">
       <input
         ref={titleRef}
         type="text"
@@ -167,11 +185,17 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
       <TextareaAutosize
         minRows={1}
         ref={bodyRef}
-        className="w-full p-2 bg-transparent focus:outline-none placeholder-gray-400 text-gray-800 resize-none "
+        className="w-full p-2 bg-transparent focus:outline-none placeholder-gray-400 text-gray-800 resize-none"
         placeholder="Type your note..."
         value={noteBody}
         onChange={handleBodyChange}
         onBlur={handleBlur}
+        onKeyDown={(e) => {
+          if ((e.key === 'Backspace' || e.key === 'Delete') && !noteBody) {
+            e.preventDefault();
+            titleRef.current?.focus();
+          }
+        }}
       />
       {showSaved && (
         <div className="absolute top-0 right-2 bg-gray-100 rounded-md text-gray-500 px-4 py-2 z-100">

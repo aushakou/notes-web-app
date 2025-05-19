@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { useTheme } from '@/context/ThemeContext';
 import useSWR from 'swr';
 import NoteForm from './NoteForm';
 import NotesList from './NotesList';
@@ -163,7 +164,21 @@ export default function NotesPage() {
     );
   };
 
-  const handleNewNote = () => {
+  const handleNewNote = async () => {
+    // If the currently selected note is the placeholder AND has unsaved changes, save it first.
+    if (selectedNote?._id === NEW_NOTE_PLACEHOLDER_ID) {
+      const currentPlaceholderInCache = notes.find(n => n._id === NEW_NOTE_PLACEHOLDER_ID);
+      if (currentPlaceholderInCache && (currentPlaceholderInCache.title || currentPlaceholderInCache.body)) {
+        await addNote({
+          title: currentPlaceholderInCache.title,
+          body: currentPlaceholderInCache.body,
+        });
+        // After saving, selectedNote in NotesPage is updated by addNote.
+        // NoteForm will also get this updated selectedNote (the real one).
+      }
+      // If it was an empty placeholder, it will be replaced by the new one below anyway.
+    }
+
     // Check for an existing empty note with a real ID
     const existingEmptyNote = notes.find(note =>
       !note.title &&
@@ -186,89 +201,103 @@ export default function NotesPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    // Use SWR's mutate to update the local cache
     mutate(
       (currentNotesData = []) => {
-        // Remove any existing placeholder first to avoid duplicates if clicked multiple times
         const notesWithoutOldPlaceholder = currentNotesData.filter(
-          note => note._id !== NEW_NOTE_PLACEHOLDER_ID
+          note => note._id !== NEW_NOTE_PLACEHOLDER_ID // This ensures any old placeholder is gone
         );
-        // Add the new placeholder at the beginning of the list
         return [placeholderNote, ...notesWithoutOldPlaceholder];
       },
-      { revalidate: false } // Don't re-fetch from server for this UI-only change
+      { revalidate: false }
     );
 
     setSelectedNote(placeholderNote);
   };
 
+  const { darkMode, toggleTheme } = useTheme();
+  
   return (
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
-        <div className="flex flex-row">
-          <div 
-          onClick={() => setShowSidebar(!showSidebar)}
-          className="z-100 bg-gray-200 hover:bg-gray-300">
-            <div 
-              className="fixed h-full w-9 bg-gray-200 hover:bg-gray-300"
+      <div className="flex flex-col h-screen bg-white dark:bg-gray-800">
+        {/* Sticky Navigation Bar */}
+        <div className="sticky overscroll-contain top-0 w-full z-50 bg-gray-100 dark:bg-gray-700 shadow-md">
+          <nav className="container overscroll-contain mx-auto px-4 py-2 flex justify-end items-center">
+            <button 
+              onClick={toggleTheme} 
+              className="px-3 py-1 rounded-md text-sm font-medium text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
             >
-            </div> 
-            <span
-              className="fixed top-1/2 -translate-y-1/2 z-50 select-none pointer-events-none text-gray-500 px-2 py-1"
-            >
-              {showSidebar ? '<<' : '>>'}
-            </span>
-          </div>
-          <div
-            className={`fixed ml-9 top-0 left-0 h-screen z-10 w-64 bg-gray-100 shadow transition-transform duration-300 transform ${
-              showSidebar ? 'translate-x-0' : '-translate-x-full'
-            }`}
-          >
-            {showSidebar && (
-              <NotesSidebar 
-                notes={notes}
-                loading={isLoading}
-                onSelect={setSelectedNote}
-                selectedNote={selectedNote}
-              />
-            )}
-          </div>
-        </div>
-        {/* Main content always full width if sidebar is hidden */}
-        <main ref={scrollContainerRef} className={`flex-1 overflow-y-auto w-fit p-6 transition-all duration-300 ${showSidebar ? 'ml-72' : 'ml-9 w-full'}`}>
-          <div className="flex justify-between items-center">
-            <h1 className="w-125 text-2xl truncate font-bold mb-4">Notes/{selectedNote?.title || 'Untitled'}</h1>
-            <button
-              onClick={handleNewNote}
-              type="button"
-              className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700"
-            >
-              New Note
+              {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
             </button>
-          </div>
-          <NoteForm
-            onAdd={addNote}
-            onUpdate={updateNote}
-            onDelete={deleteNote}
-            selectedNote={selectedNote}
-            setSelectedNote={setSelectedNote}
-            mutate={mutate}
-            scrollContainerRef={scrollContainerRef}
-          />
-          <hr className="text-gray-300 mt-6" />
-          {isLoading ? (
-            <p className="text-gray-500">Loading notes...</p>
-          ) : (
-            <div className="mt-2">
-              <NotesList
-                notes={notes}
-                onDelete={deleteNote}
-                onSelect={setSelectedNote}
-                selectedNote={selectedNote}
-              />
+          </nav>
+        </div>
+
+        {/* Main content area (sidebar + actual content) */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar */}
+          <div className="flex flex-row">
+            <div 
+            onClick={() => setShowSidebar(!showSidebar)}
+            className="z-100 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500">
+              <div 
+                className="fixed h-full w-9 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
+              >
+              </div> 
+              <span
+                className="fixed top-1/2 -translate-y-1/2 z-50 select-none pointer-events-none text-gray-500 dark:text-gray-300 px-2 py-1"
+              >
+                {showSidebar ? '<<' : '>>'}
+              </span>
             </div>
-          )}
-        </main>
+            <div
+              className={`fixed ml-9 top-10 left-0 h-screen z-10 w-64 bg-gray-100 dark:bg-gray-750 shadow transition-transform duration-300 transform ${
+                showSidebar ? 'translate-x-0' : '-translate-x-full'
+              }`}
+            >
+              {showSidebar && (
+                <NotesSidebar 
+                  notes={notes}
+                  loading={isLoading}
+                  onSelect={setSelectedNote}
+                  selectedNote={selectedNote}
+                />
+              )}
+            </div>
+          </div>
+          {/* Main content always full width if sidebar is hidden */}
+          <main ref={scrollContainerRef} className={`flex-1 overflow-y-auto overscroll-contain w-fit scroll-pb-14 p-6 transition-all duration-300 ${showSidebar ? 'ml-72' : 'ml-9 w-full'}`}>
+            <div className="flex justify-between items-center">
+              <h1 className="w-125 text-2xl truncate font-bold mb-4 text-gray-900 dark:text-gray-100">Notes/{selectedNote?.title || 'Untitled'}</h1>
+              <button
+                onClick={handleNewNote}
+                type="button"
+                className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+              >
+                New Note
+              </button>
+            </div>
+            <NoteForm
+              onAdd={addNote}
+              onUpdate={updateNote}
+              onDelete={deleteNote}
+              selectedNote={selectedNote}
+              setSelectedNote={setSelectedNote}
+              mutate={mutate}
+              scrollContainerRef={scrollContainerRef}
+            />
+            <hr className="border-gray-300 dark:border-gray-600 mt-6" />
+            {isLoading ? (
+              <p className="text-gray-500 dark:text-gray-400">Loading notes...</p>
+            ) : (
+              <div className="mt-2">
+                <NotesList
+                  notes={notes}
+                  onDelete={deleteNote}
+                  onSelect={setSelectedNote}
+                  selectedNote={selectedNote}
+                />
+              </div>
+            )}
+          </main>
+        </div>
       </div>
   );
 }
