@@ -30,31 +30,78 @@ export default function NotesPage() {
 
   // Add note
   const addNote = async ({ title, body }) => {
-    const res = await fetch('/api/notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, body, userId }),
-    });
-    const newNote = await res.json();
-    mutate(); // refresh notes
+    const tempNote = {
+      _id: `temp-${Date.now()}`,
+      title,
+      body,
+      userId,
+      createdAt: new Date().toISOString(),
+    };
+
+    let newNote;
+
+    await mutate(
+      async (currentNotes = []) => {
+        const res = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, body, userId }),
+        });
+        newNote = await res.json();
+        return [newNote, ...currentNotes.filter(n => n._id !== tempNote._id)];
+      },
+      {
+        optimisticData: (currentNotes = []) => [tempNote, ...currentNotes],
+        rollbackOnError: true,
+        revalidate: false,
+      }
+    );
+  
     return newNote;
   };
 
   // Update note
   const updateNote = async (id, { title, body }) => {
-    await fetch(`/api/notes/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, body }),
-    });
-    mutate(); // refresh notes
+    if (id.startsWith('temp-')) return; // don't try to PATCH a temp note
+
+    mutate(
+      async (currentNotes = []) => {
+        await fetch(`/api/notes/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, body }),
+        });
+        return currentNotes.map((note) =>
+          note._id === id ? { ...note, title, body } : note
+        );
+      },
+      {
+        optimisticData: (currentNotes = []) =>
+          currentNotes.map((note) =>
+            note._id === id ? { ...note, title, body } : note
+          ),
+        rollbackOnError: true,
+        revalidate: false,
+      }
+    );
   };
 
   // Delete note
   const deleteNote = async (id) => {
-    await fetch(`/api/notes/${id}`, { method: 'DELETE' });
     if (selectedNote?._id === id) setSelectedNote(null);
-    mutate(); // refresh notes
+
+    mutate(
+      async (currentNotes = []) => {
+        await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+        return currentNotes.filter((note) => note._id !== id);
+      },
+      {
+        optimisticData: (currentNotes = []) =>
+          currentNotes.filter((note) => note._id !== id),
+        rollbackOnError: true,
+        revalidate: false,
+      }
+    );
   };
 
   const handleNewNote = () => {
@@ -111,6 +158,7 @@ export default function NotesPage() {
             onDelete={deleteNote}
             selectedNote={selectedNote}
             setSelectedNote={setSelectedNote}
+            mutate={mutate}
           />
           {isLoading ? (
             <p className="text-gray-500">Loading...</p>

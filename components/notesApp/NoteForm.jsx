@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
-export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setSelectedNote }) {
+export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setSelectedNote, mutate }) {
   const [noteTitle, setNoteTitle] = useState(selectedNote?.title || '');
   const [noteBody, setNoteBody] = useState(selectedNote?.body || '');
   const [showSaved, setShowSaved] = useState(false);
@@ -10,15 +10,14 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
   const typingTimeout = useRef(null);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
+  const hasUserEdited = useRef(false);
 
   useEffect(() => {
     setNoteTitle(selectedNote?.title || '');
     setNoteBody(selectedNote?.body || '');
-    lastSavedNoteTitle.current = selectedNote?.title || '';
-    lastSavedNoteBody.current = selectedNote?.body || '';
+
     setTimeout(() => {
       if (titleRef.current) {
-        titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (!selectedNote?.title && !selectedNote?.body) {
           setTimeout(() => {
             titleRef.current?.focus();
@@ -26,13 +25,11 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
         }
       }
     }, 0);
-    
-    
   }, [selectedNote]);
 
   // Auto-save logic
   useEffect(() => {
-    if (noteTitle === lastSavedNoteTitle.current && noteBody === lastSavedNoteBody.current) {
+    if (!hasUserEdited.current || (noteTitle === lastSavedNoteTitle.current && noteBody === lastSavedNoteBody.current)) {
       return;
     }
 
@@ -50,6 +47,7 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
         lastSavedNoteTitle.current = noteTitle;
         lastSavedNoteBody.current = noteBody;
         setShowSaved(true);
+        hasUserEdited.current = false;
         setTimeout(() => setShowSaved(false), 2000);
       };
 
@@ -81,13 +79,31 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
     }
   };
 
+  const handleTitleChange = (e) => {
+    const newTitle = e.target.value;
+    setNoteTitle(newTitle);
+    setSelectedNote({ ...selectedNote, title: newTitle });
+    hasUserEdited.current = true;
+
+    mutate((notes) =>
+      notes.map((n) =>
+        n._id === selectedNote._id ? { ...n, title: newTitle } : n
+      ), false);
+  };
+
+  const handleBodyChange = (e) => {
+    const newBody = e.target.value;
+    setNoteBody(newBody);
+    hasUserEdited.current = true;
+  };
+
   return (
     <div className="relative w-full min-h-[60%] bg-gray-100 p-4 rounded-md">
       <input
         ref={titleRef}
         type="text"
         value={noteTitle}
-        onChange={(e) => setNoteTitle(e.target.value)}
+        onChange={handleTitleChange}
         onBlur={handleBlur}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -104,7 +120,7 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
         className="w-full p-2 bg-transparent focus:outline-none placeholder-gray-400 text-gray-800 resize-none "
         placeholder="Type your note..."
         value={noteBody}
-        onChange={(e) => setNoteBody(e.target.value)}
+        onChange={handleBodyChange}
         onBlur={handleBlur}
       />
       {showSaved && (
