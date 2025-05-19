@@ -9,6 +9,8 @@ export default function NotesPage() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [userId, setUserId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedNote, setSelectedNote] = useState(null);
+
 
   // Initialize user ID
   useEffect(() => {
@@ -46,6 +48,17 @@ export default function NotesPage() {
     setNotes([newNote, ...notes]);
   };
 
+  const updateNote = async (id, newText) => {
+    const res = await fetch(`/api/notes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: newText }),
+    });
+    const updatedNote = await res.json();
+  
+    setNotes(notes.map((n) => (n._id === id ? updatedNote : n)));
+  };
+
   const deleteNote = async (id) => {
     await fetch(`/api/notes/${id}`, { method: 'DELETE' });
     setNotes(notes.filter((note) => note._id !== id));
@@ -74,18 +87,33 @@ export default function NotesPage() {
             }`}
           >
             {showSidebar && (
-              <NotesSidebar notes={notes} loading={loading} />
+              <NotesSidebar notes={notes} loading={loading} onSelect={setSelectedNote} />
             )}
           </div>
         </div>
         {/* Main content always full width if sidebar is hidden */}
         <main className={`flex-1 overflow-y-auto w-fit p-6 transition-all duration-300 ${showSidebar ? 'ml-72' : 'ml-9 w-full'}`}>
-          <h1 className="text-2xl font-bold mb-4">Add a Note</h1>
-          <NoteForm onAdd={addNote} />
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold mb-4">Add a Note</h1>
+            <button
+              onClick={() => setSelectedNote(null)}
+              type="button"
+              className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700"
+            >
+              New Note
+            </button>
+          </div>
+          <NoteForm
+            onAdd={addNote}
+            onUpdate={updateNote}
+            existingNote={selectedNote}
+          />
           {loading ? (
             <p className="text-gray-500">Loading...</p>
           ) : (
-            <NotesList notes={notes} onDelete={deleteNote} />
+            <div className="mt-10">
+              <NotesList notes={notes} onDelete={deleteNote} onSelect={setSelectedNote} />
+            </div>
           )}
         </main>
       </div>

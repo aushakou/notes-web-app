@@ -1,4 +1,4 @@
-export default function NotesSidebar({ notes, loading }) {
+export default function NotesSidebar({ notes, loading, onSelect }) {
     return (
         <div className="flex h-full overflow-y-auto overscroll-contain scrollbar-hide">
             <aside className="w-64 bg-gray-100 p-2 select-none transition-all duration-300">
@@ -12,7 +12,11 @@ export default function NotesSidebar({ notes, loading }) {
                 ) : (
                     <ul className="space-y-2 pb-4 mt-10">
                     {notes.map((note) => (
-                        <li key={note._id} className="p-2 bg-white ring ring-gray-300 shadow-sm rounded text-sm truncate">
+                        <li 
+                            key={note._id} 
+                            className="p-2 bg-white ring ring-gray-300 shadow-sm rounded text-sm truncate"
+                            onClick={() => onSelect(note)}
+                        >
                         {note.text}
                         </li>
                     ))}

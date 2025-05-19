@@ -1,4 +1,4 @@
-export default function NotesList({ notes, onDelete }) {
+export default function NotesList({ notes, onDelete, onSelect }) {
   if (notes.length === 0) return <p className="text-gray-500">No notes yet.</p>;
 
   return (
@@ -6,6 +6,7 @@ export default function NotesList({ notes, onDelete }) {
       {notes.map((note) => (
         <li
           key={note._id}
+          onClick={() => onSelect(note)}
           className="p-4 mt-4 mb-4 ring ring-gray-300 shadow-md rounded flex justify-between items-center"
         >
           <span>{note.text}</span>

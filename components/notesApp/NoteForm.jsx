@@ -1,15 +1,24 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
-export default function NoteForm({ onAdd }) {
-  const [text, setText] = useState('');
-  const lastSavedText = useRef(''); // track last saved value
+export default function NoteForm({ onAdd, onUpdate, existingNote }) {
+  const [text, setText] = useState(existingNote?.text || '');
+  const lastSavedText = useRef(existingNote?.text || ''); // track last saved value
+
+  useEffect(() => {
+    setText(existingNote?.text || '');
+  }, [existingNote]);
 
   const handleBlur = () => {
     const trimmed = text.trim();
-    if (trimmed && trimmed !== lastSavedText.current) {
-      onAdd(trimmed);          // auto-save
-      lastSavedText.current = trimmed; // mark as saved
+    if (!trimmed) return;
+
+    if (existingNote) {
+      if (trimmed !== existingNote.text) {
+        onUpdate(existingNote._id, trimmed);
+      }
+    } else {
+      onAdd(trimmed);
     }
   };
 
