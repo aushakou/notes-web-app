@@ -159,14 +159,14 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
 
   if (!selectedNote) {
     return (
-      <div className="flex items-center justify-center w-full min-h-[60%] text-gray-500 italic dark:text-gray-400">
+      <div className="flex items-center justify-center w-full flex-1 text-gray-500 italic dark:text-gray-400">
         Select a note or create a new one
       </div>
     );
   }
   
   return (
-    <div className="relative w-full min-h-[60%] bg-gray-100 dark:bg-neutral-700 p-4 rounded-md">
+    <div className="relative w-full flex-1 bg-gray-100 dark:bg-neutral-700 p-4 rounded-md">
       <input
         ref={titleRef}
         type="text"

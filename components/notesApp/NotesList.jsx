@@ -1,7 +1,11 @@
 export default function NotesList({ notes, onDelete, onSelect, selectedNote, onToggleFavorite }) {
   if (notes.length === 0) return <p className="text-gray-500 dark:text-gray-400">No notes yet</p>;
 
-  const sortedNotes = [...notes].sort((a, b) => {
+  const favoriteNotes = notes.filter(note => note.isFavorite);
+
+  if (favoriteNotes.length === 0) return <p className="text-gray-500 dark:text-gray-400">No favorite notes yet</p>;
+
+  const sortedNotes = [...favoriteNotes].sort((a, b) => {
     return new Date(b.updatedAt) - new Date(a.updatedAt); // newest first
 });
 

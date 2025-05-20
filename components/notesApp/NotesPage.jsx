@@ -301,67 +301,92 @@ export default function NotesPage() {
       </div>
 
       {/* Main Area */}
-      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out overflow-hidden ${showSidebar ? 'ml-72' : 'ml-9'}`}> 
+      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out overflow-hidden overscroll-contain ${showSidebar ? 'ml-72' : 'ml-9'}`}> 
         {/* Sticky Navigation Bar */}
         <div className="sticky top-0 z-20 bg-gray-200 dark:bg-neutral-900 shadow-md overscroll-contain flex-shrink-0">
-          <nav className="px-4 py-2 flex justify-end items-center min-h-[56px]">
-            <button 
-              onClick={toggleTheme} 
-              className="px-3 py-1 rounded-md text-sm font-medium bg-neutral-200 dark:bg-neutral-800 text-gray-700 dark:text-gray-100 hover:bg-neutral-300 dark:hover:bg-neutral-600"
-            >
-              {darkMode ? '⚪ Light Theme' : '⚫ Dark Theme'}
-            </button>
+          <nav className="px-4 py-2 flex items-center min-h-[56px]">
+            <div className="flex w-1/2 justify-start items-center">
+              <button
+                onClick={handleNewNote}
+                type="button"
+                className="px-3 py-1 mr-10 rounded-md text-sm font-medium bg-neutral-300 dark:bg-neutral-800 text-gray-800 dark:text-gray-100 hover:bg-neutral-400 dark:hover:bg-neutral-600"
+              >
+                New Note
+              </button>
+            </div>
+            <div className="flex w-1/2 justify-end items-center">
+              <button 
+                onClick={toggleTheme} 
+                className="px-3 py-1 mr-10 rounded-md text-sm font-medium bg-neutral-300 dark:bg-neutral-800 text-gray-800 dark:text-gray-100 hover:bg-neutral-400 dark:hover:bg-neutral-600"
+              >
+                {darkMode ? '⚪ Light Theme' : '⚫ Dark Theme'}
+              </button>
+              <button
+                  type="button"
+                  className="px-3 py-1 rounded-md text-sm font-medium bg-neutral-300 dark:bg-neutral-800 text-gray-800 dark:text-gray-100 hover:bg-neutral-400 dark:hover:bg-neutral-600"
+                >
+                  Login
+              </button>
+            </div>
           </nav>
         </div>
 
         {/* Main scrollable content */}
-        <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 w-full overscroll-contain">
-          <div className="flex justify-between items-center">
-            <div>
+        <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-2 w-full overscroll-contain">
+          <div className="flex p-2 justify-between items-center">
             {selectedNote && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite(selectedNote._id, !selectedNote?.isFavorite);
-                }}
-              className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-neutral-600 mr-2"
-              title={selectedNote?.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-            >
-                {selectedNote?.isFavorite ? '❤️' : '🤍'}
-              </button>
+              <div className="flex w-full">
+                <div className="flex w-1/2 justify-start items-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite(selectedNote._id, !selectedNote?.isFavorite);
+                    }}
+                    className="p-1 ml-2 rounded-full hover:bg-gray-300 dark:hover:bg-neutral-600 mr-2"
+                    title={selectedNote?.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    {selectedNote?.isFavorite ? '❤️' : '🤍'}
+                  </button>
+                </div>
+                <div className="flex w-1/2 items-center justify-end">
+                  <button
+                    className="p-1 mr-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-neutral-500"
+                    title="More options"
+                  >
+                    ⋮
+                  </button>
+                </div>
+            </div>
             )}
-            </div>
-            <button
-              onClick={handleNewNote}
-              type="button"
-              className="text-white bg-gray-600 hover:bg-gray-950 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-neutral-600 dark:hover:bg-neutral-700 dark:focus:ring-neutral-800"
-            >
-              New Note
-            </button>
           </div>
-          <NoteForm
-            onAdd={addNote}
-            onUpdate={updateNote}
-            onDelete={deleteNote}
-            selectedNote={selectedNote}
-            setSelectedNote={setSelectedNote}
-            mutate={mutate}
-            scrollContainerRef={scrollContainerRef}
-          />
+          <div className="p-2 min-h-[60%] flex flex-col">
+            <NoteForm
+              onAdd={addNote}
+              onUpdate={updateNote}
+              onDelete={deleteNote}
+              selectedNote={selectedNote}
+              setSelectedNote={setSelectedNote}
+              mutate={mutate}
+              scrollContainerRef={scrollContainerRef}
+            />
+          </div>
           <hr className="border-gray-300 dark:border-gray-700 mt-6" />
-          {isLoading ? (
-            <p className="text-gray-500 dark:text-gray-400">Loading notes...</p>
-          ) : (
-            <div className="mt-2">
-              <NotesList
-                notes={notes}
-                onDelete={deleteNote}
-                onSelect={setSelectedNote}
-                selectedNote={selectedNote}
-                onToggleFavorite={onToggleFavorite}
-              />
-            </div>
-          )}
+          <div className="p-2 h-auto">
+            {isLoading ? (
+              <p className="text-gray-500 dark:text-gray-400">Loading notes...</p>
+            ) : (
+              <div className="mt-2">
+                <div><h1 className="text-2xl font-bold text-gray-600 dark:text-gray-200 text-center">Favorite Notes:</h1></div>
+                <NotesList
+                  notes={notes}
+                  onDelete={deleteNote}
+                  onSelect={setSelectedNote}
+                  selectedNote={selectedNote}
+                  onToggleFavorite={onToggleFavorite}
+                />
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>

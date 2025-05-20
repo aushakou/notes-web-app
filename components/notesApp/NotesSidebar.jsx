@@ -36,7 +36,7 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
                         const isMenuOpen = openMenuId === note._id;
                         const isSelected = selectedNote?._id === note._id;
 
-                        let liClasses = "p-2 ring shadow-sm rounded text-sm flex justify-between items-center relative group ";
+                        let liClasses = "ring shadow-sm rounded text-sm flex justify-between items-center relative group ";
 
                         if (isMenuOpen) {
                           liClasses += "z-40 "; // Highest z-index if menu is open
@@ -56,13 +56,13 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
                             key={note._id} 
                             className={liClasses}
                         >
-                          <span onClick={() => onSelect(note)} className="flex-1 truncate cursor-pointer">
+                          <span onClick={() => onSelect(note)} className="flex-1 p-3 h-full truncate cursor-pointer">
                             {note.title || 'Untitled'}
                           </span>
                           <div className="relative pr-2">
                             {note.isFavorite ? '❤️ ' : ''}
                           </div>
-                          <div className="relative">
+                          <div className="relative pr-2">
                             <button 
                               onClick={() => handleMenuToggle(note._id)} 
                               className="p-1 rounded-full hover:bg-gray-400 dark:hover:bg-neutral-500"
