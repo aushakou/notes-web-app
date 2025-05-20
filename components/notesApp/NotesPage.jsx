@@ -60,6 +60,56 @@ export default function NotesPage() {
     previousSelectedNoteIdRef.current = currentSelectedId;
   }, [selectedNote, notes, mutate]); // Dependencies: selectedNote, notes array, and mutate function
 
+  const onToggleFavorite = async (noteId, newIsFavoriteState) => {
+    // Optimistically update the local SWR cache
+    mutate(
+      (currentNotes = []) =>
+        currentNotes.map((note) =>
+          note._id === noteId ? { ...note, isFavorite: newIsFavoriteState, updatedAt: new Date().toISOString() } : note
+        ),
+      false // prevent revalidation, we will do it after the PATCH
+    );
+
+    // Optimistically update selectedNote state if it's the one being toggled
+    if (selectedNote && selectedNote._id === noteId) {
+      setSelectedNote(prevSelectedNote => ({
+        ...prevSelectedNote,
+        isFavorite: newIsFavoriteState,
+        updatedAt: new Date().toISOString() // Keep updatedAt consistent
+      }));
+    }
+
+    // Update the note on the server
+    try {
+      const res = await fetch(`/api/notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite: newIsFavoriteState }),
+      });
+      const updatedNoteFromServer = await res.json();
+
+      // Revalidate SWR cache with server data (or update directly if preferred)
+      mutate(
+        (currentNotes = []) =>
+          currentNotes.map((note) =>
+            note._id === noteId ? updatedNoteFromServer : note
+          )
+        // No explicit revalidate: false needed here, SWR will handle it smartly if an async function is passed
+        // or simply rely on the previous optimistic update if server matches.
+      );
+    } catch (error) {
+      console.error("Failed to update favorite status:", error);
+      // Optionally, revert optimistic update here if server call fails
+      mutate(
+        (currentNotes = []) =>
+          currentNotes.map((note) =>
+            note._id === noteId ? { ...note, isFavorite: !newIsFavoriteState } : note // Revert
+          ),
+        false
+      );
+    }
+  };
+
   const addNote = async ({ title, body }) => {
     let noteToReturnForForm = null;
 
@@ -107,15 +157,20 @@ export default function NotesPage() {
     return noteToReturnForForm;
   };
 
-  const updateNote = async (id, { title, body }) => {
-    if (id === NEW_NOTE_PLACEHOLDER_ID) return; // don't try to PATCH a temp note
+  const updateNote = async (id, { title, body, isFavorite }) => {
+    if (id === NEW_NOTE_PLACEHOLDER_ID) return;
+
+    const payload = {};
+    if (title !== undefined) payload.title = title;
+    if (body !== undefined) payload.body = body;
+    if (isFavorite !== undefined) payload.isFavorite = isFavorite;
 
     mutate(
       async (currentNotes = []) => {
         const res = await fetch(`/api/notes/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, body }),
+          body: JSON.stringify(payload),
         });
         
         const updatedNote = await res.json();
@@ -127,7 +182,7 @@ export default function NotesPage() {
       {
         optimisticData: (currentNotes = []) =>
           currentNotes.map((note) =>
-            note._id === id ? { ...note, title, body, updatedAt: new Date().toISOString() } : note
+            note._id === id ? { ...note, ...payload, updatedAt: new Date().toISOString() } : note
           ),
         rollbackOnError: true,
         revalidate: false,
@@ -217,87 +272,98 @@ export default function NotesPage() {
   const { darkMode, toggleTheme } = useTheme();
   
   return (
-      <div className="flex flex-col h-screen bg-white dark:bg-gray-800">
+    <div className="flex h-screen bg-white dark:bg-neutral-800 overflow-hidden overscroll-contain">
+      {/* Sidebar */}
+      <div className="flex-shrink-0">
+        <div 
+          onClick={() => setShowSidebar(!showSidebar)}
+          className="fixed top-0 left-0 h-full w-9 z-50 bg-gray-300 hover:bg-gray-400 dark:bg-neutral-800 dark:hover:bg-neutral-600 cursor-pointer overscroll-contain">
+          <span
+            className="fixed top-1/2 -translate-y-1/2 z-50 select-none pointer-events-none text-gray-600 dark:text-gray-300 px-2 py-1"
+          >
+            {showSidebar ? '<<' : '>>'}
+          </span>
+        </div>
+        <div
+          className={`fixed top-0 left-0 h-screen z-40 w-64 bg-gray-200 dark:bg-neutral-800 overscroll-contain transition-transform duration-300 transform ${showSidebar ? 'translate-x-0' : '-translate-x-full'} ml-9`}
+        >
+          {showSidebar && (
+            <NotesSidebar 
+              notes={notes}
+              loading={isLoading}
+              onSelect={setSelectedNote}
+              selectedNote={selectedNote}
+              onToggleFavorite={onToggleFavorite}
+              onDeleteNote={deleteNote}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Main Area */}
+      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out overflow-hidden ${showSidebar ? 'ml-72' : 'ml-9'}`}> 
         {/* Sticky Navigation Bar */}
-        <div className="sticky overscroll-contain top-0 w-full z-50 bg-gray-100 dark:bg-gray-700 shadow-md">
-          <nav className="container overscroll-contain mx-auto px-4 py-2 flex justify-end items-center">
+        <div className="sticky top-0 z-20 bg-gray-200 dark:bg-neutral-900 shadow-md overscroll-contain flex-shrink-0">
+          <nav className="px-4 py-2 flex justify-end items-center min-h-[56px]">
             <button 
               onClick={toggleTheme} 
-              className="px-3 py-1 rounded-md text-sm font-medium text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+              className="px-3 py-1 rounded-md text-sm font-medium bg-neutral-200 dark:bg-neutral-800 text-gray-700 dark:text-gray-100 hover:bg-neutral-300 dark:hover:bg-neutral-600"
             >
-              {darkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+              {darkMode ? '⚪ Light Theme' : '⚫ Dark Theme'}
             </button>
           </nav>
         </div>
 
-        {/* Main content area (sidebar + actual content) */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <div className="flex flex-row">
-            <div 
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="z-100 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500">
-              <div 
-                className="fixed h-full w-9 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
-              >
-              </div> 
-              <span
-                className="fixed top-1/2 -translate-y-1/2 z-50 select-none pointer-events-none text-gray-500 dark:text-gray-300 px-2 py-1"
-              >
-                {showSidebar ? '<<' : '>>'}
-              </span>
-            </div>
-            <div
-              className={`fixed ml-9 top-10 left-0 h-screen z-10 w-64 bg-gray-100 dark:bg-gray-750 shadow transition-transform duration-300 transform ${
-                showSidebar ? 'translate-x-0' : '-translate-x-full'
-              }`}
-            >
-              {showSidebar && (
-                <NotesSidebar 
-                  notes={notes}
-                  loading={isLoading}
-                  onSelect={setSelectedNote}
-                  selectedNote={selectedNote}
-                />
-              )}
-            </div>
-          </div>
-          {/* Main content always full width if sidebar is hidden */}
-          <main ref={scrollContainerRef} className={`flex-1 overflow-y-auto overscroll-contain w-fit scroll-pb-14 p-6 transition-all duration-300 ${showSidebar ? 'ml-72' : 'ml-9 w-full'}`}>
-            <div className="flex justify-between items-center">
-              <h1 className="w-125 text-2xl truncate font-bold mb-4 text-gray-900 dark:text-gray-100">Notes/{selectedNote?.title || 'Untitled'}</h1>
+        {/* Main scrollable content */}
+        <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6 w-full overscroll-contain">
+          <div className="flex justify-between items-center">
+            <div>
+            {selectedNote && (
               <button
-                onClick={handleNewNote}
-                type="button"
-                className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-              >
-                New Note
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(selectedNote._id, !selectedNote?.isFavorite);
+                }}
+              className="p-1 rounded-full hover:bg-gray-300 dark:hover:bg-neutral-600 mr-2"
+              title={selectedNote?.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+                {selectedNote?.isFavorite ? '❤️' : '🤍'}
               </button>
-            </div>
-            <NoteForm
-              onAdd={addNote}
-              onUpdate={updateNote}
-              onDelete={deleteNote}
-              selectedNote={selectedNote}
-              setSelectedNote={setSelectedNote}
-              mutate={mutate}
-              scrollContainerRef={scrollContainerRef}
-            />
-            <hr className="border-gray-300 dark:border-gray-600 mt-6" />
-            {isLoading ? (
-              <p className="text-gray-500 dark:text-gray-400">Loading notes...</p>
-            ) : (
-              <div className="mt-2">
-                <NotesList
-                  notes={notes}
-                  onDelete={deleteNote}
-                  onSelect={setSelectedNote}
-                  selectedNote={selectedNote}
-                />
-              </div>
             )}
-          </main>
-        </div>
+            </div>
+            <button
+              onClick={handleNewNote}
+              type="button"
+              className="text-white bg-gray-600 hover:bg-gray-950 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-neutral-600 dark:hover:bg-neutral-700 dark:focus:ring-neutral-800"
+            >
+              New Note
+            </button>
+          </div>
+          <NoteForm
+            onAdd={addNote}
+            onUpdate={updateNote}
+            onDelete={deleteNote}
+            selectedNote={selectedNote}
+            setSelectedNote={setSelectedNote}
+            mutate={mutate}
+            scrollContainerRef={scrollContainerRef}
+          />
+          <hr className="border-gray-300 dark:border-gray-700 mt-6" />
+          {isLoading ? (
+            <p className="text-gray-500 dark:text-gray-400">Loading notes...</p>
+          ) : (
+            <div className="mt-2">
+              <NotesList
+                notes={notes}
+                onDelete={deleteNote}
+                onSelect={setSelectedNote}
+                selectedNote={selectedNote}
+                onToggleFavorite={onToggleFavorite}
+              />
+            </div>
+          )}
+        </main>
       </div>
+    </div>
   );
 }

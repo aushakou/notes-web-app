@@ -159,14 +159,14 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
 
   if (!selectedNote) {
     return (
-      <div className="flex items-center justify-center w-full min-h-[60%] text-gray-500 italic">
+      <div className="flex items-center justify-center w-full min-h-[60%] text-gray-500 italic dark:text-gray-400">
         Select a note or create a new one
       </div>
     );
   }
   
   return (
-    <div className="relative w-full min-h-[60%] bg-gray-100 p-4 rounded-md">
+    <div className="relative w-full min-h-[60%] bg-gray-100 dark:bg-neutral-700 p-4 rounded-md">
       <input
         ref={titleRef}
         type="text"
@@ -180,12 +180,12 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
           }
         }}
         placeholder="New note title"
-        className="w-full text-2xl p-2 font-semibold bg-transparent focus:outline-none placeholder-gray-400"
+        className="w-full text-2xl p-2 font-semibold bg-transparent focus:outline-none placeholder-gray-400 dark:text-gray-100 dark:placeholder-neutral-500"
       />
       <TextareaAutosize
         minRows={1}
         ref={bodyRef}
-        className="w-full p-2 bg-transparent focus:outline-none placeholder-gray-400 text-gray-800 resize-none"
+        className="w-full p-2 bg-transparent focus:outline-none placeholder-gray-400 text-gray-800 resize-none dark:text-gray-100 dark:placeholder-neutral-500"
         placeholder="Type your note..."
         value={noteBody}
         onChange={handleBodyChange}
@@ -198,7 +198,7 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
         }}
       />
       {showSaved && (
-        <div className="absolute top-0 right-2 bg-gray-100 rounded-md text-gray-500 px-4 py-2 z-100">
+        <div className="absolute top-0 right-2 bg-gray-100 rounded-md text-gray-500 px-4 py-2 z-100 dark:bg-neutral-700 dark:text-neutral-400">
           Saved.
         </div>
       )}
