@@ -300,7 +300,12 @@ export default function NotesPage() {
     // For actual notes, proceed with API call and optimistic update
     mutate(
       async (currentNotes = []) => {
-        await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/notes/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isDeleted: true }),
+        });
+        const updatedNote = await res.json();
         return currentNotes.filter((note) => note._id !== id);
       },
       {
@@ -413,7 +418,7 @@ export default function NotesPage() {
               selectedNote={selectedNote}
               onToggleFavorite={onToggleFavorite}
               onTogglePin={onTogglePin}
-              onDeleteNote={deleteNote}
+              onDelete={deleteNote}
             />
           )}
         </div>
@@ -507,13 +512,14 @@ export default function NotesPage() {
           </div>
           <div className="p-2 min-h-[60%] flex flex-col">
             <NoteForm
+              notes={notes}
               onAdd={addNote}
               onUpdate={updateNote}
               onDelete={deleteNote}
               selectedNote={selectedNote}
               setSelectedNote={setSelectedNote}
               mutate={mutate}
-              scrollContainerRef={scrollContainerRef}
+              scrollContainerRef={scrollContainerRef}              
             />
           </div>
           <hr className="border-gray-300 dark:border-gray-700 mt-6" />

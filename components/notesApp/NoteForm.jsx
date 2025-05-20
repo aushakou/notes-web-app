@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
-export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setSelectedNote, mutate, scrollContainerRef }) {
+export default function NoteForm({ notes, onAdd, onUpdate, selectedNote, setSelectedNote, mutate, scrollContainerRef }) {
   const [noteTitle, setNoteTitle] = useState(selectedNote?.title || '');
   const [noteBody, setNoteBody] = useState(selectedNote?.body || '');
   const [showSaved, setShowSaved] = useState(false);
@@ -160,7 +160,7 @@ export default function NoteForm({ onAdd, onUpdate, onDelete, selectedNote, setS
   if (!selectedNote) {
     return (
       <div className="flex items-center justify-center w-full flex-1 text-gray-500 italic dark:text-gray-400">
-        Select a note or create a new one
+        {notes.length === 0 ? 'Create a note' : 'Select a note or create a new one'}
       </div>
     );
   }

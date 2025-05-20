@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'PATCH') {
     try {
-      const { title, body, isFavorite, isPinned } = req.body;
+      const { title, body, isFavorite, isPinned, isDeleted } = req.body;
       const note = await Note.findByIdAndUpdate(
         id,
         { 
@@ -24,6 +24,7 @@ export default async function handler(req, res) {
           body,
           isFavorite,
           isPinned,
+          isDeleted,
           updatedAt: new Date()
         },
         { new: true }

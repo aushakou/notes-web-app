@@ -5,8 +5,12 @@ export default async function handler(req, res) {
   await connectToDatabase();
 
   if (req.method === 'GET') {
-    const { userId } = req.query;
-    const notes = await Note.find({ userId });
+    const { userId, showDeleted } = req.query;
+    const query = { userId };
+    if (!showDeleted) {
+      query.isDeleted = { $ne: true };
+    }
+    const notes = await Note.find(query);
     res.status(200).json(notes);
   }
 
