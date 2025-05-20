@@ -11,7 +11,21 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const note = await Note.create(req.body);
-    res.status(201).json(note);
+    try {
+      const { title, body, isFavorite, isPinned, userId } = req.body;
+      const note = new Note({
+        userId,
+        title,
+        body,
+        isFavorite,
+        isPinned,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      await note.save();
+      res.status(201).json(note);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   }
 }

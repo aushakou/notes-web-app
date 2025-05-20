@@ -13,6 +13,7 @@ export default function NotesPage() {
   const [userId, setUserId] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
   const [selectedNote, setSelectedNote] = useState(null);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const scrollContainerRef = useRef(null);
   const previousSelectedNoteIdRef = useRef();
 
@@ -61,7 +62,26 @@ export default function NotesPage() {
   }, [selectedNote, notes, mutate]); // Dependencies: selectedNote, notes array, and mutate function
 
   const onToggleFavorite = async (noteId, newIsFavoriteState) => {
-    // Optimistically update the local SWR cache
+    // If it's the placeholder note, just update it locally
+    if (noteId === NEW_NOTE_PLACEHOLDER_ID) {
+      mutate(
+        (currentNotes = []) =>
+          currentNotes.map((note) =>
+            note._id === noteId ? { ...note, isFavorite: newIsFavoriteState, updatedAt: new Date().toISOString() } : note
+          ),
+        false
+      );
+      if (selectedNote && selectedNote._id === noteId) {
+        setSelectedNote(prevSelectedNote => ({
+          ...prevSelectedNote,
+          isFavorite: newIsFavoriteState,
+          updatedAt: new Date().toISOString()
+        }));
+      }
+      return;
+    }
+
+    // For actual notes, proceed with API call and optimistic update
     mutate(
       (currentNotes = []) =>
         currentNotes.map((note) =>
@@ -110,6 +130,70 @@ export default function NotesPage() {
     }
   };
 
+  const onTogglePin = async (noteId, newIsPinnedState) => {
+    // If it's the placeholder note, just update it locally
+    if (noteId === NEW_NOTE_PLACEHOLDER_ID) {
+      mutate(
+        (currentNotes = []) =>
+          currentNotes.map((note) =>
+            note._id === noteId ? { ...note, isPinned: newIsPinnedState, updatedAt: new Date().toISOString() } : note
+          ),
+        false
+      );
+      if (selectedNote && selectedNote._id === noteId) {
+        setSelectedNote(prevSelectedNote => ({
+          ...prevSelectedNote,
+          isPinned: newIsPinnedState,
+          updatedAt: new Date().toISOString()
+        }));
+      }
+      return;
+    }
+
+    // For actual notes, proceed with API call and optimistic update
+    mutate(
+      (currentNotes = []) =>
+        currentNotes.map((note) =>
+          note._id === noteId ? { ...note, isPinned: newIsPinnedState, updatedAt: new Date().toISOString() } : note
+        ),
+      false
+    );
+
+    // Optimistically update selectedNote state if it's the one being toggled
+    if (selectedNote && selectedNote._id === noteId) {
+      setSelectedNote(prevSelectedNote => ({
+        ...prevSelectedNote,
+        isPinned: newIsPinnedState,
+        updatedAt: new Date().toISOString()
+      }));
+    }
+
+    try {
+      const res = await fetch(`/api/notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPinned: newIsPinnedState }),
+      });
+      const updatedNoteFromServer = await res.json();
+
+      mutate(
+        (currentNotes = []) =>
+          currentNotes.map((note) =>
+            note._id === noteId ? updatedNoteFromServer : note
+          )
+      );
+    } catch (error) {
+      console.error("Failed to update pin status:", error);
+      mutate(
+        (currentNotes = []) =>
+          currentNotes.map((note) =>
+            note._id === noteId ? { ...note, isPinned: !newIsPinnedState } : note
+          ),
+        false
+      );
+    }
+  };
+
   const addNote = async ({ title, body }) => {
     let noteToReturnForForm = null;
 
@@ -118,7 +202,14 @@ export default function NotesPage() {
         const res = await fetch('/api/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, body, userId, updatedAt: new Date().toISOString() }),
+          body: JSON.stringify({ 
+            title, 
+            body, 
+            userId, 
+            isFavorite: selectedNote?.isFavorite || false,
+            isPinned: selectedNote?.isPinned || false,
+            updatedAt: new Date().toISOString() 
+          }),
         });
         const newNoteFromServer = await res.json();
         noteToReturnForForm = newNoteFromServer;
@@ -143,6 +234,8 @@ export default function NotesPage() {
                 ...note,
                 title,
                 body,
+                isFavorite: selectedNote?.isFavorite || false,
+                isPinned: selectedNote?.isPinned || false,
                 updatedAt: new Date().toISOString(),
               };
             }
@@ -269,6 +362,31 @@ export default function NotesPage() {
     setSelectedNote(placeholderNote);
   };
 
+  const handleOptionsToggle = () => {
+    setShowOptionsMenu(!showOptionsMenu);
+  };
+
+  const handlePin = () => {
+    if (selectedNote) {
+      onTogglePin(selectedNote._id, !selectedNote.isPinned);
+      setShowOptionsMenu(false);
+    }
+  };
+
+  const handleFavorite = () => {
+    if (selectedNote) {
+      onToggleFavorite(selectedNote._id, !selectedNote.isFavorite);
+      setShowOptionsMenu(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (selectedNote) {
+      deleteNote(selectedNote._id);
+      setShowOptionsMenu(false);
+    }
+  };
+
   const { darkMode, toggleTheme } = useTheme();
   
   return (
@@ -277,7 +395,7 @@ export default function NotesPage() {
       <div className="flex-shrink-0">
         <div 
           onClick={() => setShowSidebar(!showSidebar)}
-          className="fixed top-0 left-0 h-full w-9 z-50 bg-gray-300 hover:bg-gray-400 dark:bg-neutral-800 dark:hover:bg-neutral-600 cursor-pointer overscroll-contain">
+          className="fixed top-0 left-0 h-full w-9 z-50 bg-gray-300 hover:bg-gray-400 dark:bg-neutral-700 dark:hover:bg-neutral-600 cursor-pointer overscroll-contain">
           <span
             className="fixed top-1/2 -translate-y-1/2 z-50 select-none pointer-events-none text-gray-600 dark:text-gray-300 px-2 py-1"
           >
@@ -294,6 +412,7 @@ export default function NotesPage() {
               onSelect={setSelectedNote}
               selectedNote={selectedNote}
               onToggleFavorite={onToggleFavorite}
+              onTogglePin={onTogglePin}
               onDeleteNote={deleteNote}
             />
           )}
@@ -349,12 +468,39 @@ export default function NotesPage() {
                   </button>
                 </div>
                 <div className="flex w-1/2 items-center justify-end">
-                  <button
-                    className="p-1 mr-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-neutral-500"
-                    title="More options"
-                  >
-                    ⋮
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={handleOptionsToggle}
+                      className="p-1 mr-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-neutral-500"
+                      title="More options"
+                    >
+                      ⋮
+                    </button>
+                    {showOptionsMenu && (
+                      <div 
+                        className="absolute right-0 mt-1 w-48 bg-white dark:bg-neutral-800 rounded-md shadow-lg z-50 ring-1 ring-gray-300 dark:ring-gray-700 ring-opacity-5 focus:outline-none"
+                      >
+                        <button 
+                          onClick={handlePin}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                        >
+                          {selectedNote?.isPinned ? 'Unpin from Top' : 'Pin to Top'}
+                        </button>
+                        <button 
+                          onClick={handleFavorite}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                        >
+                          {selectedNote?.isFavorite ? 'Remove from Favorite' : 'Add to Favorite'}
+                        </button>
+                        <button 
+                          onClick={handleDelete} 
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
             </div>
             )}

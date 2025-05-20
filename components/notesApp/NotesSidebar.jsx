@@ -1,8 +1,12 @@
 import { useState } from 'react';
 
-export default function NotesSidebar({ notes, loading, onSelect, selectedNote, onToggleFavorite, onDeleteNote }) {
+export default function NotesSidebar({ notes, loading, onSelect, selectedNote, onToggleFavorite, onTogglePin, onDeleteNote }) {
     const sortedNotes = [...notes].sort((a, b) => {
-        return new Date(b.updatedAt) - new Date(a.updatedAt); // newest first
+        // First sort by pinned status
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        // Then sort by date
+        return new Date(b.updatedAt) - new Date(a.updatedAt);
     });
     const [openMenuId, setOpenMenuId] = useState(null);
 
@@ -12,6 +16,11 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
 
     const handleFavorite = (noteId, currentIsFavorite) => {
         onToggleFavorite(noteId, !currentIsFavorite);
+        setOpenMenuId(null);
+    };
+
+    const handlePin = (noteId, currentIsPinned) => {
+        onTogglePin(noteId, !currentIsPinned);
         setOpenMenuId(null);
     };
 
@@ -27,9 +36,9 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
                     <h2 className="text-lg mt-2 ml-2 font-bold text-gray-900 dark:text-gray-300">🗂 My Notes</h2>
                 </div>
                 {loading ? (
-                    <p className="text-sm mt-10 text-gray-500">Loading notes...</p>
+                    <p className="text-sm mt-15 text-gray-500">Loading notes...</p>
                 ) : notes.length === 0 ? (
-                    <p className="text-sm mt-10 text-gray-600">No notes yet</p>
+                    <p className="text-sm mt-15 text-gray-600">No notes yet</p>
                 ) : (
                     <ul className="space-y-2 pb-4 mt-13">
                     {sortedNotes.map((note) => {
@@ -61,6 +70,7 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
                           </span>
                           <div className="relative pr-2">
                             {note.isFavorite ? '❤️ ' : ''}
+                            {note.isPinned ? '📌 ' : ''}
                           </div>
                           <div className="relative pr-2">
                             <button 
@@ -74,6 +84,12 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
                               <div 
                                 className="absolute right-0 mt-1 w-48 bg-white dark:bg-neutral-800 rounded-md shadow-lg z-50 ring-1 ring-gray-300 dark:ring-gray-700 ring-opacity-5 focus:outline-none"
                               >
+                                <button 
+                                  onClick={() => handlePin(note._id, note.isPinned)}
+                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                                >
+                                  {note.isPinned ? 'Unpin from Top' : 'Pin to Top'}
+                                </button>
                                 <button 
                                   onClick={() => handleFavorite(note._id, note.isFavorite)}
                                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"

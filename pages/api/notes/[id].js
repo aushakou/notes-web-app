@@ -16,12 +16,21 @@ export default async function handler(req, res) {
 
   if (req.method === 'PATCH') {
     try {
-      const updatedNote = await Note.findByIdAndUpdate(id, req.body, {
-        new: true,
-      });
-      res.status(200).json(updatedNote);
+      const { title, body, isFavorite, isPinned } = req.body;
+      const note = await Note.findByIdAndUpdate(
+        id,
+        { 
+          title, 
+          body,
+          isFavorite,
+          isPinned,
+          updatedAt: new Date()
+        },
+        { new: true }
+      );
+      res.status(200).json(note);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to update note' });
+      res.status(500).json({ error: error.message });
     }
   }
 
