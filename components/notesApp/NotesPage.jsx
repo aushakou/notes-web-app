@@ -14,6 +14,8 @@ export default function NotesPage() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [selectedNote, setSelectedNote] = useState(null);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [smartSuggestions, setSmartSuggestions] = useState(true);
   const scrollContainerRef = useRef(null);
   const previousSelectedNoteIdRef = useRef();
 
@@ -25,7 +27,18 @@ export default function NotesPage() {
       localStorage.setItem('userId', storedId);
     }
     setUserId(storedId);
+    
+    // Initialize smartSuggestions from localStorage
+    const savedSmartSuggestions = localStorage.getItem('smartSuggestions');
+    if (savedSmartSuggestions !== null) {
+      setSmartSuggestions(savedSmartSuggestions === 'true');
+    }
   }, []);
+  
+  // Save smartSuggestions preference
+  useEffect(() => {
+    localStorage.setItem('smartSuggestions', smartSuggestions);
+  }, [smartSuggestions]);
 
   // Fetch notes with SWR
   const { data: notes = [], mutate, isLoading } = useSWR(
@@ -392,8 +405,30 @@ export default function NotesPage() {
     }
   };
 
+  const handleSettingsToggle = () => {
+    setShowSettingsMenu(!showSettingsMenu);
+  };
+
+  const handleToggleSmartSuggestions = () => {
+    setSmartSuggestions(!smartSuggestions);
+  };
+
   const { darkMode, toggleTheme } = useTheme();
   
+  // Close settings menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showSettingsMenu && !event.target.closest('.settings-menu-container')) {
+        setShowSettingsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSettingsMenu]);
+
   return (
     <div className="flex h-screen bg-white dark:bg-neutral-800 overflow-hidden overscroll-none">
       {/* Sidebar */}
@@ -439,12 +474,30 @@ export default function NotesPage() {
               </button>
             </div>
             <div className="flex w-1/2 justify-end items-center">
-              <button 
-                onClick={toggleTheme} 
-                className="px-3 py-1 mr-10 rounded-md text-sm font-medium bg-neutral-300 dark:bg-neutral-800 text-gray-800 dark:text-gray-100 hover:bg-neutral-400 dark:hover:bg-neutral-600"
-              >
-                {darkMode ? '⚪ Light Theme' : '⚫ Dark Theme'}
-              </button>
+              <div className="relative settings-menu-container">
+                <button 
+                  onClick={handleSettingsToggle} 
+                  className="px-3 py-1 mr-3 rounded-md text-sm font-medium bg-neutral-300 dark:bg-neutral-800 text-gray-800 dark:text-gray-100 hover:bg-neutral-400 dark:hover:bg-neutral-600"
+                >
+                  ⚙️ Settings
+                </button>
+                {showSettingsMenu && (
+                  <div className="absolute right-0 mt-1 w-56 bg-white dark:bg-neutral-800 rounded-md shadow-lg z-50 ring-1 ring-gray-300 dark:ring-gray-700 ring-opacity-5 focus:outline-none">
+                    <button 
+                      onClick={toggleTheme}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    >
+                      {darkMode ? '⚪ Switch to Light Theme' : '⚫ Switch to Dark Theme'}
+                    </button>
+                    <button 
+                      onClick={handleToggleSmartSuggestions}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    >
+                      {smartSuggestions ? '🧠 Smart Suggestions: ON' : '💤 Smart Suggestions: OFF'}
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                   type="button"
                   className="px-3 py-1 rounded-md text-sm font-medium bg-neutral-300 dark:bg-neutral-800 text-gray-800 dark:text-gray-100 hover:bg-neutral-400 dark:hover:bg-neutral-600"
@@ -528,7 +581,8 @@ export default function NotesPage() {
               selectedNote={selectedNote}
               setSelectedNote={setSelectedNote}
               mutate={mutate}
-              scrollContainerRef={scrollContainerRef}              
+              scrollContainerRef={scrollContainerRef}
+              smartSuggestions={smartSuggestions}
             />
           </div>
           <hr className="border-gray-300 dark:border-gray-700 mt-6" />
