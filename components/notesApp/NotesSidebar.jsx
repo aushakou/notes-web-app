@@ -38,8 +38,10 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
     const trashCount = notes.filter(note => note.isDeleted).length;
 
     return (
-        <div className="flex h-full dark:bg-neutral-900 overflow-y-auto overscroll-contain scrollbar-hide">
-            <aside className="w-64 bg-gray-200 p-2 select-none transition-all duration-300 dark:bg-neutral-900 overscroll-contain relative">
+        <div className="flex h-full dark:bg-neutral-900 overflow-y-auto overscroll-none scrollbar-hide" 
+             data-scrollable="true"
+             style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+            <aside className="w-64 bg-gray-200 p-2 select-none transition-all duration-300 dark:bg-neutral-900 overscroll-none relative">
                 <div className="fixed top-0 left-0 w-full h-14 bg-gray-200 dark:bg-neutral-900 z-120">
                     <h2 className="text-lg mt-2 ml-2 font-bold text-gray-900 dark:text-gray-300">🗂 My Notes</h2>
                 </div>
@@ -48,7 +50,7 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
                 ) : notes.length === 0 ? (
                     <p className="text-sm mt-15 text-gray-600">No notes yet</p>
                 ) : (
-                    <ul className="space-y-2 pb-16 mt-13">
+                    <ul className="space-y-2 pb-16 mt-13 overscroll-none">
                     {sortedNotes.map((note) => {
                         const isMenuOpen = openMenuId === note._id;
                         const isSelected = selectedNote?._id === note._id;
@@ -118,7 +120,7 @@ export default function NotesSidebar({ notes, loading, onSelect, selectedNote, o
                     </ul>
                 )}
                 {/* Fixed bottom bar */}
-                <div className="fixed z-140 bottom-0 left-0 w-64 h-14 bg-gray-200 dark:bg-neutral-900 border-t border-gray-300 dark:border-neutral-700 flex items-center px-4">
+                <div className="fixed z-140 bottom-0 left-0 w-64 h-14 bg-gray-200 dark:bg-neutral-900 border-t border-gray-300 dark:border-neutral-700 flex items-center px-4 overscroll-none">
                     <button
                         onClick={handleTrashClick}
                         className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-neutral-700 rounded-md p-1 pr-4 pl-4 hover:text-gray-900 dark:hover:text-gray-100"

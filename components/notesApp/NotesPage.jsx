@@ -395,12 +395,12 @@ export default function NotesPage() {
   const { darkMode, toggleTheme } = useTheme();
   
   return (
-    <div className="flex h-screen bg-white dark:bg-neutral-800 overflow-hidden overscroll-contain">
+    <div className="flex h-screen bg-white dark:bg-neutral-800 overflow-hidden overscroll-none">
       {/* Sidebar */}
       <div className="flex-shrink-0">
         <div 
           onClick={() => setShowSidebar(!showSidebar)}
-          className="fixed top-0 left-0 h-full w-9 z-50 bg-gray-300 hover:bg-gray-400 dark:bg-neutral-700 dark:hover:bg-neutral-600 cursor-pointer overscroll-contain">
+          className="fixed top-0 left-0 h-full w-9 z-50 bg-gray-300 hover:bg-gray-400 dark:bg-neutral-700 dark:hover:bg-neutral-600 cursor-pointer overscroll-none">
           <span
             className="fixed top-1/2 -translate-y-1/2 z-50 select-none pointer-events-none text-gray-600 dark:text-gray-300 px-2 py-1"
           >
@@ -408,7 +408,7 @@ export default function NotesPage() {
           </span>
         </div>
         <div
-          className={`fixed top-0 left-0 h-screen z-40 w-64 bg-gray-200 dark:bg-neutral-800 overscroll-contain transition-transform duration-300 transform ${showSidebar ? 'translate-x-0' : '-translate-x-full'} ml-9`}
+          className={`fixed top-0 left-0 h-screen z-40 w-64 bg-gray-200 dark:bg-neutral-800 overscroll-none transition-transform duration-300 transform ${showSidebar ? 'translate-x-0' : '-translate-x-full'} ml-9`}
         >
           {showSidebar && (
             <NotesSidebar 
@@ -425,9 +425,9 @@ export default function NotesPage() {
       </div>
 
       {/* Main Area */}
-      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out overflow-hidden overscroll-contain ${showSidebar ? 'ml-72' : 'ml-9'}`}> 
+      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out overflow-hidden overscroll-none ${showSidebar ? 'ml-72' : 'ml-9'}`}> 
         {/* Sticky Navigation Bar */}
-        <div className="sticky top-0 z-20 bg-gray-200 dark:bg-neutral-900 shadow-md overscroll-contain flex-shrink-0">
+        <div className="sticky top-0 z-20 bg-gray-200 dark:bg-neutral-900 shadow-md overscroll-none flex-shrink-0">
           <nav className="px-4 py-2 flex items-center min-h-[56px]">
             <div className="flex w-1/2 justify-start items-center">
               <button
@@ -456,7 +456,16 @@ export default function NotesPage() {
         </div>
 
         {/* Main scrollable content */}
-        <main ref={scrollContainerRef} className="flex-1 overflow-y-auto p-2 w-full overscroll-contain">
+        <main 
+          ref={scrollContainerRef} 
+          className="flex-1 overflow-y-auto overscroll-none p-2 w-full"
+          style={{ 
+            WebkitOverflowScrolling: 'touch',
+            position: 'relative',
+            height: 'calc(100vh - 56px)',
+            touchAction: 'pan-y'
+          }}
+        >
           <div className="flex p-2 justify-between items-center">
             {selectedNote && (
               <div className="flex w-full">
